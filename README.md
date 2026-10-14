@@ -8,7 +8,7 @@ El objetivo final es un **único fichero `.html` autoejecutable**: lo abres desd
 
 > **Estado actual (v0.1.0):** el juego es jugable de principio a fin: hub → selección de personaje → partida de 90 s → resultados → repetir. Gráficos y sonidos se generan por código (ver [sección 8](#8-decisiones-respecto-a-la-spec)). El repositorio Git está inicializado (rama `main`), pero aún no tiene commits ni remoto.
 >
-> **Probarlo ya:** `npm install` y luego `npm run dev`, o `npm run build` y abrir `dist/index.html` con doble clic.
+> **Probarlo ya:** `pnpm install` y luego `pnpm dev`, o `pnpm build` y abrir `dist/index.html` con doble clic.
 >
 > La especificación completa está en [`docs/SPEC_01_Initial_spec.docx`](docs/SPEC_01_Initial_spec.docx).
 
@@ -301,13 +301,34 @@ El sistema de gas **nunca** referencia "poio" ni "marcus" directamente. Pide *"e
 Comandos:
 
 ```bash
-npm install        # instala dependencias (una vez)
-npm run dev        # desarrollo: abre http://localhost:5173 con recarga en caliente
-npm run build      # producción: comprueba tipos y genera dist/index.html (un único fichero)
-npm test           # ejecuta los tests una vez
-npm run test:watch # tests en modo vigilancia mientras programas
-npm run typecheck  # solo comprobación de tipos
+pnpm install          # instala dependencias (una vez, y tras cambiar package.json)
+pnpm dev              # desarrollo: abre http://localhost:5173 con recarga en caliente
+pnpm build            # producción: comprueba tipos y genera dist/index.html (un único fichero)
+pnpm test             # ejecuta los tests una vez
+pnpm test:watch       # tests en modo vigilancia mientras programas
+pnpm typecheck        # solo comprobación de tipos
+pnpm audit            # busca vulnerabilidades conocidas en las dependencias
 ```
+
+> ⚠️ El gestor de paquetes del proyecto es **pnpm** (versión fijada en `package.json`). No uses `npm install` dentro del proyecto: crearía un segundo lockfile y saltaría las protecciones de seguridad. Para instalar pnpm (una vez, fuera del proyecto): `npm i -g pnpm@12.11.2`.
+
+### Seguridad de dependencias
+
+Instalar un paquete significa descargar y ejecutar código de terceros en tu ordenador. Por eso `pnpm-workspace.yaml` aplica una política básica (basada en `docs/SPEC_02_Security_pnpm.docx`):
+
+| Ajuste | Qué protege |
+|---|---|
+| `minimumReleaseAge: 1440` | Solo se instalan versiones publicadas hace más de 24 h. Muchas versiones maliciosas se retiran en las primeras horas |
+| `strictDepBuilds: true` | Ningún paquete ejecuta scripts de instalación (`postinstall`…) sin aprobación. Hoy ninguno lo pide |
+| `blockExoticSubdeps: true` | Las dependencias indirectas no pueden venir de repos Git o URLs sueltas |
+| `trustPolicy: no-downgrade` | Rechaza versiones publicadas con menos garantías que las anteriores |
+| `verifyDepsBeforeRun: error` | Si `node_modules` no coincide con el lockfile, los comandos fallan en vez de reinstalar solos |
+| Versiones exactas en `package.json` | Nada se actualiza sin que lo decidas tú |
+| `nodeLinker: hoisted` | No es de seguridad: Windows no permite los enlaces que pnpm usa por defecto sin Modo de desarrollador |
+
+`pnpm-lock.yaml` fija las versiones exactas de **todo** el árbol (45 paquetes) y hay que subirlo al repo.
+
+**Excepción conocida:** `pnpm audit` avisa de `braces@3.0.3` (severidad alta, GHSA-vfj7-8cjw-p6xm, aún sin versión corregida). Llega por `vite-plugin-singlefile → micromatch`. Es un bloqueo por patrones muy anidados, y solo se ejecuta al compilar con los patrones de nuestra propia configuración: **no llega al juego publicado** y nadie externo puede aprovecharlo. Revisar cuando salga una versión corregida.
 
 Tamaño actual de `dist/index.html`: **~1,3 MB** (~350 KB comprimido). Casi todo es Phaser; el juego en sí apenas ocupa porque no lleva imágenes ni audios.
 

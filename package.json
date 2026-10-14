@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "description": "Plataforma de minijuegos 2D para navegador. Primer juego: Togas Walking arround.",
   "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -16,9 +20,9 @@
     "phaser": "3.90.0"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^8.3.4",
-    "vite-plugin-singlefile": "^2.3.3",
-    "vitest": "^5.0.4"
+    "typescript": "5.9.3",
+    "vite": "8.3.4",
+    "vite-plugin-singlefile": "2.3.3",
+    "vitest": "5.0.4"
   }
 }

@@ -1,0 +1,28 @@
+# Togas — configuración de seguridad de dependencias (SPEC_02, puntos aplicados).
+# Protege sobre todo de versiones maliciosas recién publicadas y de scripts de instalación.
+
+# Solo se instalan versiones publicadas hace al menos 24 h (1440 minutos).
+# Muchas versiones maliciosas se detectan y retiran en las primeras horas.
+minimumReleaseAge: 1440
+# Si no hay ninguna versión con 24 h, falla en vez de coger una más nueva.
+minimumReleaseAgeStrict: true
+
+# Las dependencias indirectas no pueden venir de fuentes raras (repos Git, URLs sueltas).
+blockExoticSubdeps: true
+
+# Rechaza una versión si sus garantías de publicación son peores que las de versiones anteriores
+# (p. ej. antes se publicaba con procedencia verificada y ahora no).
+trustPolicy: no-downgrade
+
+# Ningún paquete puede ejecutar scripts de instalación (preinstall/postinstall…) sin aprobación.
+# Si alguno lo pide, la instalación falla para que se revise a mano.
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
+
+# node_modules plano (como npm). La estructura aislada de pnpm usa enlaces simbólicos,
+# que Windows no permite sin Modo de desarrollador. No afecta a la seguridad ni al juego.
+nodeLinker: hoisted
+
+# Si las dependencias instaladas no coinciden con el lockfile, `pnpm dev/test/build` falla
+# en vez de reinstalar por su cuenta.
+verifyDepsBeforeRun: error
