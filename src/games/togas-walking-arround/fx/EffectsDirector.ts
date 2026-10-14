@@ -163,7 +163,10 @@ export class EffectsDirector {
 
   private comicText(text: string, x: number, y: number, size: number, color: string, angle: number): void {
     const t = this.takeText(text, size, color);
-    t.setPosition(x, y).setScale(0.2).setAngle(angle);
+    // Que los textos largos (nivel 5) no se salgan de la pantalla.
+    const half = t.width / 2 + 12;
+    const safeX = Phaser.Math.Clamp(x, half, Math.max(half, GAME_CONFIG.view.width - half));
+    t.setPosition(safeX, y).setScale(0.2).setAngle(angle);
     this.scene.tweens.add({ targets: t, scale: 1, duration: 220, ease: 'Back.easeOut' });
     this.scene.tweens.add({ targets: t, y: y - 40, alpha: 0, delay: 650, duration: 450, onComplete: () => t.setVisible(false) });
   }

@@ -13,6 +13,7 @@ import { SPAWN_CONFIG } from '../config/spawn.config';
 import { CityBackdrop } from '../entities/CityBackdrop';
 import { Collectible } from '../entities/Collectible';
 import { Obstacle } from '../entities/Obstacle';
+import { PedestrianCrowd } from '../entities/PedestrianCrowd';
 import { PigeonFlock } from '../entities/PigeonFlock';
 import { Player } from '../entities/Player';
 import { EffectsDirector } from '../fx/EffectsDirector';
@@ -57,6 +58,7 @@ export class PlayScene extends Phaser.Scene {
   private backdrop!: CityBackdrop;
   private player!: Player;
   private pigeons!: PigeonFlock;
+  private pedestrians!: PedestrianCrowd;
   private fx!: EffectsDirector;
   private collectibles: Collectible[] = [];
   private obstacles: Obstacle[] = [];
@@ -99,6 +101,7 @@ export class PlayScene extends Phaser.Scene {
 
     this.backdrop = new CityBackdrop(this);
     this.pigeons = new PigeonFlock(this);
+    this.pedestrians = new PedestrianCrowd(this);
     this.player = new Player(this, this.rt.skin, view.width * playerAnchorX);
     this.player.idle();
     this.fx = new EffectsDirector(this);
@@ -146,6 +149,7 @@ export class PlayScene extends Phaser.Scene {
     const distance = this.runner.distance;
     this.backdrop.setScroll(distance, this.clock);
     this.pigeons.update(distance, dt);
+    this.pedestrians.update(distance, dt);
     if (this.state === 'playing') this.spawnUpTo(distance + GAME_CONFIG.view.width + 80, progress);
     this.updateWorldObjects(distance);
     this.player.update(this.runner);
@@ -266,6 +270,7 @@ export class PlayScene extends Phaser.Scene {
     // Retroceso visual: el eructo empuja hacia atrás y el pedo, hacia delante.
     this.recoil(isBurp ? -presentation.recoil : presentation.recoil);
     if (presentation.scareBirds) this.pigeons.scare(this.player.sprite.x, presentation.celebrate ? 4 : 0);
+    if (!isBurp) this.pedestrians.react(this.player.sprite.x, emission.tier, this.rt.reducedMotion);
 
     if (emission.tier === GAME_CONFIG.gas.maxTier && !this.legendaryAnnounced) {
       this.legendaryAnnounced = true;

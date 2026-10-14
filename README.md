@@ -40,6 +40,7 @@ Es un *runner* 2D de comedia. Un estudiante de ingeniería avanza solo por una c
 | Personajes (skins) | **Poio** (1,80 m, calvo) y **Marcus** (1,72 m, poco pelo). Cambian el aspecto y los sonidos, **nunca** la jugabilidad |
 | Coleccionables | Fabes, garbanzos, coliflor, lata de cerveza y refresco. Suben el **medidor de gas** y dan puntos |
 | Obstáculos | Aerored y sales de fruta. Bajan el gas, pero no te quitan puntos |
+| Viandantes | Pasean por la acera y reaccionan a los **pedos**: sorpresa o cabreo (con la cara ampliada en una viñeta de cómic) o salen corriendo. Cuanto más fuerte el pedo, más lejos llega y más huyen. Solo decorado; se ajusta en `config/pedestrians.config.ts` |
 | Mecánica central | Cuando el gas llega a **100**, el personaje eructa o se tira un pedo de forma automática (alternando). Cada emisión sube la **intensidad**, de nivel 1 (*Tiny*) a 5 (*Legendary*) |
 
 El ciclo de una partida es: **elegir skin → correr y saltar → recoger comida → emisiones cada vez más épicas → pantalla de resultados → repetir**.
