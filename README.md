@@ -1,5 +1,7 @@
 # Togas
 
+▶ **Jugar:** https://marcusmcfly.github.io/Togas/dist/
+
 Plataforma de minijuegos 2D para navegador. La arquitectura está organizada en capas para que se puedan añadir juegos nuevos sin tocar el núcleo. El primer minijuego es **Togas Walking arround** (ID `togas-walking-arround`).
 
 El objetivo final es un **único fichero `.html` autoejecutable**: lo abres desde un enlace (o con doble clic) y el juego arranca. No hace falta servidor ni instalación.
