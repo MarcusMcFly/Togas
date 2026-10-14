@@ -278,7 +278,16 @@ assets/audio/poio/poio_burp_t01_v01.ogg
 
 **Mínimo necesario:** 2 skins × 2 tipos × 5 intensidades = **20 clips**.
 
-El sistema de gas **nunca** referencia "poio" ni "marcus" directamente. Pide *"el eructo de nivel 3 de la skin activa"* y el `AudioManager` resuelve qué fichero toca.
+El sistema de gas **nunca** referencia "poio" ni "marcus" directamente. Pide *"el eructo de nivel 3 de la skin activa"* y `audio/emissionSounds.ts` resuelve qué sonido toca.
+
+**Cómo se generan hoy (sin ficheros):** `audio/emissionSynth.ts` sintetiza cada sonido muestra a muestra imitando cómo se producen de verdad:
+
+| | Fuente | Filtro | Detalles |
+|---|---|---|---|
+| **Eructo** | Cuerdas vocales: pulsos graves e irregulares, con "voz rota" al empezar y al acabar | La boca: dos formantes que deslizan la vocal "o → aaa → u" | Golpe de glotis inicial y gorgoteo de garganta |
+| **Pedo** | Una válvula que aletea a trompicones, en varios tramos ("prrt… PRRRRT") | Resonancia del cuerpo + graves | Chasquidos húmedos, escape de aire, "pfff" final y pitido en niveles altos |
+
+La voz de cada skin está en `skins.config.ts` (`voice`): tono, timbre, voz rota, gorgoteo, humedad y aire. Los niveles 4 y 5 añaden reverberación de calle. Cada combinación se genera una vez (unos 10–40 ms) y queda en caché.
 
 ### Imágenes y marcas
 

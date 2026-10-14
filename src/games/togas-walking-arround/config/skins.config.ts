@@ -1,23 +1,26 @@
 import type { CharacterLook } from '../art/character';
 
-/** Parámetros del sintetizador de eructos. */
+/** Parámetros del sintetizador de eructos (modelo de cuerdas vocales + boca). */
 export interface BurpVoice {
-  /** Frecuencia fundamental en Hz (más baja = más grave). */
+  /** Tono de las cuerdas vocales en Hz (más bajo = más grave). */
   basePitch: number;
-  /** Frecuencia del filtro que da el "color" de la voz. */
-  formant: number;
-  wave: OscillatorType;
-  /** 0–1: cuánto "raspa" la garganta. */
+  /** Formantes F1 y F2 de la vocal abierta ("aaa"): el timbre de la boca. */
+  formants: readonly [number, number];
+  /** 0–1: voz rota, irregular ("creaky voice"). */
   roughness: number;
+  /** 0–1: gorgoteo de garganta. */
+  gurgle: number;
 }
 
-/** Parámetros del sintetizador de pedos. */
+/** Parámetros del sintetizador de pedos (modelo de válvula que aletea + resonancia). */
 export interface FartVoice {
+  /** Velocidad de aleteo en Hz: el "trrrr". */
   basePitch: number;
-  /** Velocidad del "trrrr" en Hz. */
-  flutter: number;
-  wave: OscillatorType;
-  /** 0–1: cuánto aire (ruido) lleva. */
+  /** Frecuencia de resonancia del "cuerpo" del sonido. */
+  resonance: number;
+  /** 0–1: chasquidos húmedos. */
+  wetness: number;
+  /** 0–1: cuánto aire escapa (ruido). */
   breathiness: number;
 }
 
@@ -59,8 +62,10 @@ export const SKINS: readonly SkinDefinition[] = [
       emblem: '∫',
     },
     voice: {
-      burp: { basePitch: 72, formant: 520, wave: 'sawtooth', roughness: 0.7 },
-      fart: { basePitch: 58, flutter: 24, wave: 'sawtooth', breathiness: 0.45 },
+      // Grave y rasposo: un eructo de bajo profundo.
+      burp: { basePitch: 66, formants: [520, 950], roughness: 0.75, gurgle: 0.55 },
+      // Lento y retumbante, poco húmedo.
+      fart: { basePitch: 48, resonance: 170, wetness: 0.3, breathiness: 0.3 },
     },
   },
   {
@@ -80,8 +85,10 @@ export const SKINS: readonly SkinDefinition[] = [
       emblem: 'π',
     },
     voice: {
-      burp: { basePitch: 98, formant: 720, wave: 'square', roughness: 0.45 },
-      fart: { basePitch: 76, flutter: 33, wave: 'square', breathiness: 0.7 },
+      // Más agudo y "vocal": un BUAAARP con mucha boca.
+      burp: { basePitch: 94, formants: [680, 1180], roughness: 0.45, gurgle: 0.35 },
+      // Más rápido, húmedo y con más aire.
+      fart: { basePitch: 68, resonance: 240, wetness: 0.65, breathiness: 0.55 },
     },
   },
 ];
