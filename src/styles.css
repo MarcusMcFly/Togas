@@ -1,0 +1,370 @@
+:root {
+  --ink: #2b2340;
+  --bg: #1f1a3d;
+  --bg-2: #2d2758;
+  --paper: #fff8ec;
+  --accent: #ff8a3d;
+  --accent-2: #ffd23f;
+  --gas: #8bd450;
+  --muted: #8f87b5;
+  --radius: 18px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 20% 0%, var(--bg-2), var(--bg) 60%) fixed;
+  color: var(--paper);
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+#app {
+  min-height: 100%;
+}
+
+/* ---------- Botones ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 48px;
+  padding: 0 1.25em;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  font: 800 1rem var(--font);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  user-select: none;
+}
+
+.btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 3px;
+}
+
+.btn--primary {
+  background: var(--accent);
+}
+
+.btn--secondary {
+  background: var(--paper);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--paper);
+  border-color: rgba(255, 248, 236, 0.4);
+  box-shadow: none;
+}
+
+.btn__icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+/* ---------- Hub ---------- */
+
+.hub {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 32px
+    max(16px, env(safe-area-inset-left));
+}
+
+.hub__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.hub__title {
+  margin: 0;
+  font-size: clamp(2.6rem, 9vw, 4.5rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--accent-2);
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(255, 210, 63, 0.35);
+}
+
+.hub__subtitle {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.hub__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.hub__footer {
+  margin-top: 32px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 0 var(--ink);
+}
+
+.card__thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-bottom: 3px solid var(--ink);
+  background: #8fd3ff;
+}
+
+.card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.card__desc {
+  margin: 0;
+  flex: 1;
+  color: #5a4f78;
+  line-height: 1.4;
+}
+
+.card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #efe4d0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.card__play {
+  margin-top: 4px;
+}
+
+.card--soon {
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  gap: 8px;
+  background: transparent;
+  color: var(--muted);
+  border-style: dashed;
+  border-color: rgba(143, 135, 181, 0.5);
+  box-shadow: none;
+}
+
+.card__soon-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 3px dashed currentColor;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.card__soon-text {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- Marco del juego ---------- */
+
+.game-frame {
+  position: fixed;
+  inset: 0;
+  background: #120f24;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.game-stage {
+  width: 100%;
+  height: 100%;
+  /* Evita zoom/scroll del navegador al tocar: el toque es "saltar". */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.game-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: var(--muted);
+}
+
+.pause-button {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px);
+  right: calc(env(safe-area-inset-right) + 10px);
+  width: 52px;
+  padding: 0;
+  font-size: 1.2rem;
+}
+
+.pause-button[hidden] {
+  display: none;
+}
+
+/* ---------- Modales ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 10, 30, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+.overlay__panel {
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 22px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 0 var(--ink);
+}
+
+.overlay__title {
+  margin: 0 0 14px;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* ---------- Ajustes ---------- */
+
+.settings {
+  display: grid;
+  gap: 8px;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f3e9d6;
+  cursor: pointer;
+}
+
+.setting__text {
+  display: grid;
+  gap: 2px;
+}
+
+.setting__label {
+  font-weight: 800;
+}
+
+.setting__hint {
+  font-size: 0.8rem;
+  color: #6c6188;
+}
+
+.setting input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--accent);
+}
+
+.setting input[type='range'] {
+  width: 140px;
+  accent-color: var(--accent);
+}
+
+/* ---------- Plantilla de minijuego ---------- */
+
+.template-game {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  height: 100%;
+  text-align: center;
+}
+
+.template-game__count {
+  font-size: 5rem;
+  font-weight: 900;
+  color: var(--accent-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+}
