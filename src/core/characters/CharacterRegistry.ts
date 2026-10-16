@@ -58,7 +58,7 @@ export const SKINS: readonly SkinDefinition[] = [
   {
     id: 'exar',
     displayName: 'Exar',
-    tagline: '1,76 m · Barba, melena y astucia',
+    tagline: '1,76 m · Barba, tupé y astucia',
     heightM: 1.76,
     look: {
       skinTone: '#eab68a',
@@ -66,7 +66,7 @@ export const SKINS: readonly SkinDefinition[] = [
       pants: '#5c4b3b',
       shoes: '#1d1d1d',
       backpack: '#9b5de5',
-      hair: 'mane',
+      hair: 'quiff',
       hairColor: '#5a3820',
       stubble: false,
       beard: true,

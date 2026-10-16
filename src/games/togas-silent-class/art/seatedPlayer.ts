@@ -151,8 +151,8 @@ function drawArms(ctx: Ctx, look: CharacterLook, pose: TorsoPose, shoulderY: num
 
 /** Cabeza vista por detrás: la calva de Poio o la coronilla clara de Marcus. */
 function drawHeadBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): void {
-  if (look.hair === 'mane') {
-    drawManeBack(ctx, look, hx, hy);
+  if (look.hair === 'quiff') {
+    drawQuiffBack(ctx, look, hx, hy);
     return;
   }
   for (const side of [-1, 1]) {
@@ -190,35 +190,38 @@ function drawHeadBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): vo
   ctx.fill();
 }
 
-/** Melena vista por detrás: tapa la nuca y las orejas y cae hasta los hombros. */
-function drawManeBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): void {
+/** Pelo corto visto por detrás (el tupé queda delante): tapa la coronilla y deja la nuca rapada. */
+function drawQuiffBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): void {
   if (look.beard) {
     // La barba asoma por los lados de la mandíbula.
     for (const side of [-1, 1]) {
-      ellipsePath(ctx, hx + side * 17, hy + 20, 8, 9, side * 0.4);
+      ellipsePath(ctx, hx + side * 17, hy + 18, 7, 8, side * 0.4);
       fillStroke(ctx, shade(look.hairColor, -0.1), 2);
     }
   }
-  ctx.beginPath();
-  ctx.moveTo(hx - 23, hy - 2);
-  ctx.quadraticCurveTo(hx - 27, hy + 22, hx - 18, hy + 32);
-  ctx.quadraticCurveTo(hx, hy + 38, hx + 18, hy + 32);
-  ctx.quadraticCurveTo(hx + 27, hy + 22, hx + 23, hy - 2);
-  ctx.closePath();
-  fillStroke(ctx, shade(look.hairColor, -0.08));
-  ellipsePath(ctx, hx, hy, 22.5, 24);
-  fillStroke(ctx, look.hairColor);
-  // Mechones.
-  ctx.strokeStyle = shade(look.hairColor, 0.25);
-  ctx.lineWidth = 1.8;
-  for (const dx of [-14, -7, 0, 7, 14]) {
-    ctx.beginPath();
-    ctx.moveTo(hx + dx * 0.4, hy - 20);
-    ctx.quadraticCurveTo(hx + dx * 1.2, hy + 4, hx + dx * 1.1, hy + 30);
-    ctx.stroke();
+  for (const side of [-1, 1]) {
+    ellipsePath(ctx, hx + side * 21, hy + 4, 5.5, 8);
+    fillStroke(ctx, look.skinTone, 2.2);
   }
-  ellipsePath(ctx, hx - 7, hy - 13, 8, 3.5, -0.4);
-  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ellipsePath(ctx, hx, hy, 21, 23);
+  fillStroke(ctx, look.skinTone);
+  ctx.save();
+  ellipsePath(ctx, hx, hy, 21, 23);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(hx - 22, hy + 6);
+  ctx.quadraticCurveTo(hx, hy + 14, hx + 22, hy + 6);
+  ctx.lineTo(hx + 22, hy - 24);
+  ctx.lineTo(hx - 22, hy - 24);
+  ctx.closePath();
+  ctx.fillStyle = look.hairColor;
+  ctx.fill();
+  // Nuca rapada.
+  ctx.fillStyle = 'rgba(70,50,40,0.18)';
+  ctx.fillRect(hx - 22, hy + 8, 44, 8);
+  ctx.restore();
+  ellipsePath(ctx, hx - 6, hy - 10, 7, 3, -0.4);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
   ctx.fill();
 }
 
@@ -235,18 +238,6 @@ export function drawFace(ctx: Ctx, look: CharacterLook, expression: Expression):
   ctx.lineJoin = 'round';
 
   const tone = expression === 'breath' ? '#d9a3c9' : expression === 'strain' ? shade(look.skinTone, -0.06) : look.skinTone;
-  if (look.hair === 'mane') {
-    // Melena por detrás de la cara, hasta la mandíbula.
-    ctx.beginPath();
-    ctx.moveTo(-28, -6);
-    ctx.quadraticCurveTo(-34, 16, -27, 28);
-    ctx.lineTo(27, 28);
-    ctx.quadraticCurveTo(34, 16, 28, -6);
-    ctx.closePath();
-    fillStroke(ctx, shade(look.hairColor, -0.08));
-    ellipsePath(ctx, 0, -6, 29, 27);
-    fillStroke(ctx, look.hairColor);
-  }
   if (look.beard) {
     // Punta de la barba bajo la barbilla.
     ellipsePath(ctx, 0, 23, 16, 9);
@@ -288,12 +279,14 @@ export function drawFace(ctx: Ctx, look: CharacterLook, expression: Expression):
     ctx.fillRect(-26, -12, 7, 16);
     ctx.fillRect(19, -12, 7, 16);
   }
-  if (look.hair === 'mane') {
-    // Flequillo ladeado sobre la frente.
+  if (look.hair === 'quiff') {
+    // Pelo corto: sienes y nacimiento del pelo.
     ctx.beginPath();
-    ctx.moveTo(-26, 2);
-    ctx.quadraticCurveTo(-22, -14, -6, -16);
-    ctx.quadraticCurveTo(8, -12, 26, -6);
+    ctx.moveTo(-26, -4);
+    ctx.lineTo(-21, -4);
+    ctx.quadraticCurveTo(-18, -17, 0, -18);
+    ctx.quadraticCurveTo(18, -17, 21, -4);
+    ctx.lineTo(26, -4);
     ctx.lineTo(26, -30);
     ctx.lineTo(-26, -30);
     ctx.closePath();
@@ -301,8 +294,17 @@ export function drawFace(ctx: Ctx, look: CharacterLook, expression: Expression):
     ctx.fill();
   }
   ctx.restore();
-  if (look.hair === 'mane') {
-    ellipsePath(ctx, -10, -20, 8, 3, -0.3);
+  if (look.hair === 'quiff') {
+    // Tupé ladeado que sube por encima de la frente.
+    ctx.beginPath();
+    ctx.moveTo(-20, -16);
+    ctx.quadraticCurveTo(-16, -34, 4, -34);
+    ctx.quadraticCurveTo(22, -33, 22, -18);
+    ctx.quadraticCurveTo(10, -24, -2, -20);
+    ctx.quadraticCurveTo(-12, -17, -20, -16);
+    ctx.closePath();
+    fillStroke(ctx, look.hairColor, 2.2);
+    ellipsePath(ctx, -2, -29, 9, 2.6, -0.1);
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.fill();
   } else if (look.hair === 'thinning') {

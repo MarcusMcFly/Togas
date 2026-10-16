@@ -176,13 +176,6 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
     fillStroke(ctx, shade(look.skinTone, -0.12), 2);
   }
 
-  if (look.hair === 'mane') {
-    // Melena por detrás de la cabeza, cayendo hasta la nuca.
-    ellipsePath(ctx, hx - 5, hy - 3, 20, 21);
-    fillStroke(ctx, look.hairColor);
-    ellipsePath(ctx, hx - 13, hy + 10, 9, 13, 0.2);
-    fillStroke(ctx, look.hairColor);
-  }
   if (look.beard) {
     // Punta de la barba: asoma por debajo de la barbilla.
     ellipsePath(ctx, hx + 6, hy + 15, 11, 8, -0.15);
@@ -230,13 +223,13 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
     ctx.fillStyle = look.hairColor;
     ctx.fill();
   }
-  if (look.hair === 'mane') {
-    // Casquete de pelo hasta la frente; la oreja queda tapada.
+  if (look.hair === 'quiff') {
+    // Pelo corto: nuca y coronilla, por encima de la oreja.
     ctx.beginPath();
-    ctx.moveTo(hx - 18, hy + 8);
-    ctx.lineTo(hx - 6, hy + 6);
-    ctx.quadraticCurveTo(hx - 3, hy - 8, hx + 4, hy - 9);
-    ctx.quadraticCurveTo(hx + 12, hy - 10, hx + 18, hy - 7);
+    ctx.moveTo(hx - 18, hy + 4);
+    ctx.lineTo(hx - 13, hy + 4);
+    ctx.quadraticCurveTo(hx - 6, hy - 6, hx + 4, hy - 11);
+    ctx.quadraticCurveTo(hx + 12, hy - 13, hx + 18, hy - 11);
     ctx.lineTo(hx + 18, hy - 20);
     ctx.lineTo(hx - 18, hy - 20);
     ctx.closePath();
@@ -249,15 +242,16 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
     ellipsePath(ctx, hx - 4, hy - 11, 6, 3, -0.4);
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.fill();
-  } else if (look.hair === 'mane') {
-    // Flequillo que sobresale hacia delante y brillo.
+  } else if (look.hair === 'quiff') {
+    // Tupé: sube desde la frente y se curva hacia atrás.
     ctx.beginPath();
-    ctx.moveTo(hx - 2, hy - 15);
-    ctx.quadraticCurveTo(hx + 14, hy - 22, hx + 21, hy - 9);
-    ctx.quadraticCurveTo(hx + 12, hy - 13, hx + 6, hy - 9);
+    ctx.moveTo(hx - 8, hy - 15);
+    ctx.quadraticCurveTo(hx - 2, hy - 27, hx + 12, hy - 24);
+    ctx.quadraticCurveTo(hx + 20, hy - 21, hx + 17, hy - 12);
+    ctx.quadraticCurveTo(hx + 10, hy - 14, hx + 4, hy - 11);
     ctx.closePath();
     fillStroke(ctx, look.hairColor, 2.2);
-    ellipsePath(ctx, hx - 6, hy - 13, 6, 2.5, -0.5);
+    ellipsePath(ctx, hx + 4, hy - 21, 6, 2.2, -0.2);
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.fill();
   } else {

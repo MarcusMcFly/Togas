@@ -13,8 +13,8 @@ export interface CharacterLook {
   pants: string;
   shoes: string;
   backpack: string;
-  /** `mane`: melena abundante con flequillo. */
-  hair: 'bald' | 'thinning' | 'mane';
+  /** `quiff`: pelo corto con tupé. */
+  hair: 'bald' | 'thinning' | 'quiff';
   hairColor: string;
   stubble: boolean;
   /** Barba completa (del color del pelo). */
