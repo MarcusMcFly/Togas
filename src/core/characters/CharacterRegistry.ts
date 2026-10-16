@@ -55,6 +55,32 @@ export const SKINS: readonly SkinDefinition[] = [
       fart: { basePitch: 68, resonance: 240, wetness: 0.65, breathiness: 0.55 },
     },
   },
+  {
+    id: 'exar',
+    displayName: 'Exar',
+    tagline: '1,76 m · Barba, melena y astucia',
+    heightM: 1.76,
+    look: {
+      skinTone: '#eab68a',
+      shirt: '#2a9d8f',
+      pants: '#5c4b3b',
+      shoes: '#1d1d1d',
+      backpack: '#9b5de5',
+      hair: 'mane',
+      hairColor: '#5a3820',
+      stubble: false,
+      beard: true,
+      eyeColor: '#3fae5a',
+      sly: true,
+      emblem: 'Σ',
+    },
+    voice: {
+      // Entre los dos: un eructo medio, nasal y con un punto socarrón.
+      burp: { basePitch: 80, formants: [600, 1400], roughness: 0.55, gurgle: 0.45 },
+      // Ritmo medio, seco y con un silbido de aire al final.
+      fart: { basePitch: 58, resonance: 205, wetness: 0.4, breathiness: 0.7 },
+    },
+  },
 ];
 
 export const DEFAULT_SKIN_ID = SKINS[0].id;

@@ -45,7 +45,7 @@ export function getThumbnail(): string {
 
   SKINS.forEach((skin, i) => {
     ctx.save();
-    ctx.translate(120 + i * 70, 142);
+    ctx.translate(95 + i * 55, 142);
     ctx.scale(0.85, 0.85);
     drawCharacter(ctx, skin.look, runPose(i * 2 + 1), 0, 0);
     ctx.restore();

@@ -151,6 +151,10 @@ function drawArms(ctx: Ctx, look: CharacterLook, pose: TorsoPose, shoulderY: num
 
 /** Cabeza vista por detrás: la calva de Poio o la coronilla clara de Marcus. */
 function drawHeadBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): void {
+  if (look.hair === 'mane') {
+    drawManeBack(ctx, look, hx, hy);
+    return;
+  }
   for (const side of [-1, 1]) {
     ellipsePath(ctx, hx + side * 21, hy + 4, 5.5, 8);
     fillStroke(ctx, look.skinTone, 2.2);
@@ -186,6 +190,38 @@ function drawHeadBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): vo
   ctx.fill();
 }
 
+/** Melena vista por detrás: tapa la nuca y las orejas y cae hasta los hombros. */
+function drawManeBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): void {
+  if (look.beard) {
+    // La barba asoma por los lados de la mandíbula.
+    for (const side of [-1, 1]) {
+      ellipsePath(ctx, hx + side * 17, hy + 20, 8, 9, side * 0.4);
+      fillStroke(ctx, shade(look.hairColor, -0.1), 2);
+    }
+  }
+  ctx.beginPath();
+  ctx.moveTo(hx - 23, hy - 2);
+  ctx.quadraticCurveTo(hx - 27, hy + 22, hx - 18, hy + 32);
+  ctx.quadraticCurveTo(hx, hy + 38, hx + 18, hy + 32);
+  ctx.quadraticCurveTo(hx + 27, hy + 22, hx + 23, hy - 2);
+  ctx.closePath();
+  fillStroke(ctx, shade(look.hairColor, -0.08));
+  ellipsePath(ctx, hx, hy, 22.5, 24);
+  fillStroke(ctx, look.hairColor);
+  // Mechones.
+  ctx.strokeStyle = shade(look.hairColor, 0.25);
+  ctx.lineWidth = 1.8;
+  for (const dx of [-14, -7, 0, 7, 14]) {
+    ctx.beginPath();
+    ctx.moveTo(hx + dx * 0.4, hy - 20);
+    ctx.quadraticCurveTo(hx + dx * 1.2, hy + 4, hx + dx * 1.1, hy + 30);
+    ctx.stroke();
+  }
+  ellipsePath(ctx, hx - 7, hy - 13, 8, 3.5, -0.4);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fill();
+}
+
 /** Expresiones del retrato del HUD (vista de frente). */
 export type Expression = 'calm' | 'strain' | 'sweat' | 'breath' | 'relief' | 'embarrassed' | 'proud' | 'shock';
 export const EXPRESSIONS: readonly Expression[] = ['calm', 'strain', 'sweat', 'breath', 'relief', 'embarrassed', 'proud', 'shock'];
@@ -199,6 +235,23 @@ export function drawFace(ctx: Ctx, look: CharacterLook, expression: Expression):
   ctx.lineJoin = 'round';
 
   const tone = expression === 'breath' ? '#d9a3c9' : expression === 'strain' ? shade(look.skinTone, -0.06) : look.skinTone;
+  if (look.hair === 'mane') {
+    // Melena por detrás de la cara, hasta la mandíbula.
+    ctx.beginPath();
+    ctx.moveTo(-28, -6);
+    ctx.quadraticCurveTo(-34, 16, -27, 28);
+    ctx.lineTo(27, 28);
+    ctx.quadraticCurveTo(34, 16, 28, -6);
+    ctx.closePath();
+    fillStroke(ctx, shade(look.hairColor, -0.08));
+    ellipsePath(ctx, 0, -6, 29, 27);
+    fillStroke(ctx, look.hairColor);
+  }
+  if (look.beard) {
+    // Punta de la barba bajo la barbilla.
+    ellipsePath(ctx, 0, 23, 16, 9);
+    fillStroke(ctx, look.hairColor);
+  }
   for (const side of [-1, 1]) {
     ellipsePath(ctx, side * 25, 2, 5, 7.5);
     fillStroke(ctx, tone, 2);
@@ -214,13 +267,45 @@ export function drawFace(ctx: Ctx, look: CharacterLook, expression: Expression):
     ctx.fillStyle = 'rgba(70,50,40,0.2)';
     ctx.fill();
   }
+  if (look.beard) {
+    // Patillas, mandíbula y bigote, con un hueco de piel para la boca.
+    ctx.beginPath();
+    ctx.moveTo(-26, -2);
+    ctx.lineTo(-21, -2);
+    ctx.quadraticCurveTo(-20, 11, -9, 10);
+    ctx.quadraticCurveTo(0, 7, 9, 10);
+    ctx.quadraticCurveTo(20, 11, 21, -2);
+    ctx.lineTo(26, -2);
+    ctx.lineTo(26, 30);
+    ctx.lineTo(-26, 30);
+    ctx.closePath();
+    ctx.ellipse(0, 16, 9, 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = look.hairColor;
+    ctx.fill('evenodd');
+  }
   if (look.hair === 'thinning') {
     ctx.fillStyle = look.hairColor;
     ctx.fillRect(-26, -12, 7, 16);
     ctx.fillRect(19, -12, 7, 16);
   }
+  if (look.hair === 'mane') {
+    // Flequillo ladeado sobre la frente.
+    ctx.beginPath();
+    ctx.moveTo(-26, 2);
+    ctx.quadraticCurveTo(-22, -14, -6, -16);
+    ctx.quadraticCurveTo(8, -12, 26, -6);
+    ctx.lineTo(26, -30);
+    ctx.lineTo(-26, -30);
+    ctx.closePath();
+    ctx.fillStyle = look.hairColor;
+    ctx.fill();
+  }
   ctx.restore();
-  if (look.hair === 'thinning') {
+  if (look.hair === 'mane') {
+    ellipsePath(ctx, -10, -20, 8, 3, -0.3);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fill();
+  } else if (look.hair === 'thinning') {
     ctx.strokeStyle = look.hairColor;
     ctx.lineWidth = 1.6;
     for (const dx of [-4, 1, 6]) {
@@ -241,7 +326,9 @@ export function drawFace(ctx: Ctx, look: CharacterLook, expression: Expression):
   drawMouth(ctx, expression);
 
   // Mofletes y extras.
-  const blush = expression === 'embarrassed' ? 0.6 : expression === 'strain' || expression === 'breath' ? 0.45 : 0.2;
+  const baseBlush = expression === 'embarrassed' ? 0.6 : expression === 'strain' || expression === 'breath' ? 0.45 : 0.2;
+  // Sobre la barba el rubor apenas se ve: se atenúa para que no ensucie.
+  const blush = look.beard ? baseBlush * 0.5 : baseBlush;
   for (const side of [-1, 1]) {
     const big = expression === 'breath';
     ellipsePath(ctx, side * 14, 11, big ? 9 : 5.5, big ? 8 : 4);
@@ -285,14 +372,37 @@ function drawEyes(ctx: Ctx, look: CharacterLook, expression: Expression): void {
       case 'embarrassed':
         ellipsePath(ctx, ex, ey, 4.5, 5.5);
         fillStroke(ctx, '#ffffff', 1.6);
-        circlePath(ctx, ex, ey, 1.8);
+        if (look.eyeColor) {
+          circlePath(ctx, ex, ey, 2.6);
+          ctx.fillStyle = look.eyeColor;
+          ctx.fill();
+          ctx.fillStyle = OUTLINE;
+          circlePath(ctx, ex, ey, 1.1);
+        } else {
+          circlePath(ctx, ex, ey, 1.8);
+        }
         ctx.fill();
         break;
       default:
         ellipsePath(ctx, ex, ey, 3.5, 4.2);
         fillStroke(ctx, '#ffffff', 1.5);
-        circlePath(ctx, ex + 0.5, ey + 0.5, 1.9);
+        if (look.eyeColor) {
+          circlePath(ctx, ex + 0.5, ey + 0.5, 2.6);
+          ctx.fillStyle = look.eyeColor;
+          ctx.fill();
+          ctx.fillStyle = OUTLINE;
+          circlePath(ctx, ex + 0.5, ey + 0.5, 1.2);
+        } else {
+          circlePath(ctx, ex + 0.5, ey + 0.5, 1.9);
+        }
         ctx.fill();
+        if (look.sly && expression === 'calm') {
+          // Párpados a media asta.
+          ctx.beginPath();
+          ctx.ellipse(ex, ey, 3.5, 4.2, 0, Math.PI, Math.PI * 2);
+          ctx.closePath();
+          fillStroke(ctx, shade(look.skinTone, -0.08), 1.5);
+        }
     }
     // Cejas.
     ctx.strokeStyle = look.hairColor;
@@ -301,8 +411,11 @@ function drawEyes(ctx: Ctx, look: CharacterLook, expression: Expression): void {
     const worried = expression === 'sweat' || expression === 'embarrassed';
     const angry = expression === 'strain';
     const lift = expression === 'shock' || expression === 'breath' ? -4 : 0;
-    ctx.moveTo(ex - 5, ey - 9 + lift + (worried ? 2 * side : angry ? -2 * side : 0));
-    ctx.lineTo(ex + 5, ey - 9 + lift + (worried ? -2 * side : angry ? 2 * side : 0));
+    // Astuto: una ceja arqueada y la otra baja.
+    const sly = look.sly && !worried && !angry && lift === 0 ? (side < 0 ? -3 : 1) : 0;
+    const slyTilt = sly ? -2 * side : 0;
+    ctx.moveTo(ex - 5, ey - 9 + lift + sly + (worried ? 2 * side : angry ? -2 * side : 0) - slyTilt);
+    ctx.lineTo(ex + 5, ey - 9 + lift + sly + (worried ? -2 * side : angry ? 2 * side : 0) + slyTilt);
     ctx.stroke();
     ctx.strokeStyle = OUTLINE;
     ctx.lineWidth = 2;

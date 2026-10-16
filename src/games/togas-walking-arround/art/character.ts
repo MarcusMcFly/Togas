@@ -176,6 +176,19 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
     fillStroke(ctx, shade(look.skinTone, -0.12), 2);
   }
 
+  if (look.hair === 'mane') {
+    // Melena por detrás de la cabeza, cayendo hasta la nuca.
+    ellipsePath(ctx, hx - 5, hy - 3, 20, 21);
+    fillStroke(ctx, look.hairColor);
+    ellipsePath(ctx, hx - 13, hy + 10, 9, 13, 0.2);
+    fillStroke(ctx, look.hairColor);
+  }
+  if (look.beard) {
+    // Punta de la barba: asoma por debajo de la barbilla.
+    ellipsePath(ctx, hx + 6, hy + 15, 11, 8, -0.15);
+    fillStroke(ctx, look.hairColor);
+  }
+
   // Oreja.
   ellipsePath(ctx, hx - 9, hy + 2, 4.5, 6);
   fillStroke(ctx, look.skinTone, 2.2);
@@ -192,6 +205,20 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
     ctx.fillStyle = 'rgba(70,50,40,0.22)';
     ctx.fill();
   }
+  if (look.beard) {
+    // Patilla, mandíbula y bigote, con un hueco de piel para la boca.
+    ctx.beginPath();
+    ctx.moveTo(hx - 9, hy - 2);
+    ctx.lineTo(hx - 4, hy - 2);
+    ctx.quadraticCurveTo(hx - 1, hy + 8, hx + 8, hy + 7);
+    ctx.lineTo(hx + 20, hy + 8);
+    ctx.lineTo(hx + 20, hy + 22);
+    ctx.lineTo(hx - 12, hy + 22);
+    ctx.closePath();
+    ctx.ellipse(hx + 11, hy + 11.5, 5, 3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = look.hairColor;
+    ctx.fill('evenodd');
+  }
   if (look.hair === 'thinning') {
     // Pelo solo en los lados y la nuca.
     ctx.beginPath();
@@ -203,11 +230,35 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
     ctx.fillStyle = look.hairColor;
     ctx.fill();
   }
+  if (look.hair === 'mane') {
+    // Casquete de pelo hasta la frente; la oreja queda tapada.
+    ctx.beginPath();
+    ctx.moveTo(hx - 18, hy + 8);
+    ctx.lineTo(hx - 6, hy + 6);
+    ctx.quadraticCurveTo(hx - 3, hy - 8, hx + 4, hy - 9);
+    ctx.quadraticCurveTo(hx + 12, hy - 10, hx + 18, hy - 7);
+    ctx.lineTo(hx + 18, hy - 20);
+    ctx.lineTo(hx - 18, hy - 20);
+    ctx.closePath();
+    ctx.fillStyle = look.hairColor;
+    ctx.fill();
+  }
   ctx.restore();
 
   if (look.hair === 'bald') {
     ellipsePath(ctx, hx - 4, hy - 11, 6, 3, -0.4);
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fill();
+  } else if (look.hair === 'mane') {
+    // Flequillo que sobresale hacia delante y brillo.
+    ctx.beginPath();
+    ctx.moveTo(hx - 2, hy - 15);
+    ctx.quadraticCurveTo(hx + 14, hy - 22, hx + 21, hy - 9);
+    ctx.quadraticCurveTo(hx + 12, hy - 13, hx + 6, hy - 9);
+    ctx.closePath();
+    fillStroke(ctx, look.hairColor, 2.2);
+    ellipsePath(ctx, hx - 6, hy - 13, 6, 2.5, -0.5);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.fill();
   } else {
     // Cuatro pelos valientes en la coronilla.
@@ -229,16 +280,17 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
     ctx.fill();
   }
 
-  // Ceja.
+  // Ceja (la astuta baja hacia la nariz: está tramando algo).
   const browLift = p.eyes === 'wide' ? -3 : p.eyes === 'closed' ? 1 : 0;
+  const browTilt = look.sly && p.eyes !== 'wide' ? 3 : -1;
   ctx.strokeStyle = look.hairColor;
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(hx + 6, hy - 7 + browLift);
-  ctx.lineTo(hx + 14, hy - 8 + browLift);
+  ctx.moveTo(hx + 6, hy - (look.sly ? 9 : 7) + browLift);
+  ctx.lineTo(hx + 14, hy - (look.sly ? 9 : 7) + browLift + browTilt);
   ctx.stroke();
 
-  drawEye(ctx, p.eyes, hx + 10, hy - 1);
+  drawEye(ctx, look, p.eyes, hx + 10, hy - 1);
 
   // Nariz.
   ellipsePath(ctx, hx + 17, hy + 3, 4.5, 4);
@@ -252,7 +304,7 @@ function drawHead(ctx: Ctx, look: CharacterLook, p: Pose, hx: number, hy: number
   drawMouth(ctx, p.mouth, hx + 11, hy + 10);
 }
 
-function drawEye(ctx: Ctx, eyes: Eyes, ex: number, ey: number): void {
+function drawEye(ctx: Ctx, look: CharacterLook, eyes: Eyes, ex: number, ey: number): void {
   ctx.lineWidth = 1.8;
   ctx.strokeStyle = OUTLINE;
   switch (eyes) {
@@ -261,9 +313,21 @@ function drawEye(ctx: Ctx, eyes: Eyes, ex: number, ey: number): void {
       const big = eyes === 'wide';
       ellipsePath(ctx, ex, ey, big ? 4.6 : 3.6, big ? 5.4 : 4.3);
       fillStroke(ctx, '#ffffff', 1.5);
-      circlePath(ctx, ex + 1.3, ey + 0.5, big ? 1.7 : 2);
+      if (look.eyeColor) {
+        circlePath(ctx, ex + 1.2, ey + 0.5, big ? 2.6 : 2.5);
+        ctx.fillStyle = look.eyeColor;
+        ctx.fill();
+      }
+      circlePath(ctx, ex + 1.3, ey + 0.5, look.eyeColor ? 1.2 : big ? 1.7 : 2);
       ctx.fillStyle = OUTLINE;
       ctx.fill();
+      if (look.sly && !big) {
+        // Párpado a media asta.
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, 3.6, 4.3, 0, Math.PI, Math.PI * 2);
+        ctx.closePath();
+        fillStroke(ctx, shade(look.skinTone, -0.08), 1.5);
+      }
       break;
     }
     case 'closed':

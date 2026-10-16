@@ -13,9 +13,16 @@ export interface CharacterLook {
   pants: string;
   shoes: string;
   backpack: string;
-  hair: 'bald' | 'thinning';
+  /** `mane`: melena abundante con flequillo. */
+  hair: 'bald' | 'thinning' | 'mane';
   hairColor: string;
   stubble: boolean;
+  /** Barba completa (del color del pelo). */
+  beard?: boolean;
+  /** Color del iris. Sin él, los ojos son solo pupila negra. */
+  eyeColor?: string;
+  /** Cejas arqueadas y media sonrisa ladeada: cara de tramar algo. */
+  sly?: boolean;
   /** Símbolo de la camiseta. */
   emblem: string;
 }
