@@ -1,5 +1,5 @@
 import { Random } from '../../../core/utils/Random';
-import { OUTLINE, circlePath, ellipsePath, fillStroke, label, roundRectPath, shade } from './paint';
+import { OUTLINE, circlePath, ellipsePath, fillStroke, label, roundRectPath, shade } from '../../../core/art/paint';
 
 type Ctx = CanvasRenderingContext2D;
 

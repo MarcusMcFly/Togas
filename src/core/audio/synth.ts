@@ -1,4 +1,4 @@
-import type { PlayingSound } from '../../../core/services/AudioManager';
+import type { PlayingSound } from '../services/AudioManager';
 
 /** Piezas básicas de síntesis compartidas por todos los sonidos del juego. */
 

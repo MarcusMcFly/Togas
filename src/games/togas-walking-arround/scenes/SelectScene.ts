@@ -4,11 +4,11 @@ import { ART_SCALE, charTex, idleAnim, runAnim } from '../art/textures';
 import { emissionSound } from '../audio/emissionSounds';
 import { clickSound } from '../audio/sfx';
 import { GAME_CONFIG } from '../config/game.config';
-import { REFERENCE_HEIGHT_M, SKINS } from '../config/skins.config';
+import { REFERENCE_HEIGHT_M, SKINS } from '../../../core/characters/CharacterRegistry';
 import { CityBackdrop } from '../entities/CityBackdrop';
 import type { TogasRuntime } from '../runtime';
 import { COLORS, DEPTH, addText } from '../ui/theme';
-import { createButton, drawPanel } from '../ui/widgets';
+import { createButton, drawPanel } from '../../../core/ui/phaser/widgets';
 
 interface Card {
   container: Phaser.GameObjects.Container;

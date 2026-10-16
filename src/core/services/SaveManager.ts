@@ -19,12 +19,13 @@ export class MemoryStore implements KeyValueStore {
 }
 
 /**
- * `localStorage` puede no existir o lanzar errores (modo privado, cookies bloqueadas…).
- * En ese caso se usa memoria: el juego funciona igual, solo que sin persistencia.
+ * `localStorage`/`sessionStorage` pueden no existir o lanzar errores (modo privado,
+ * cookies bloqueadas…). En ese caso se usa memoria: el juego funciona igual, solo que
+ * sin persistencia.
  */
-function detectStorage(): KeyValueStore {
+export function detectStorage(kind: 'local' | 'session' = 'local'): KeyValueStore {
   try {
-    const storage = globalThis.localStorage;
+    const storage = kind === 'local' ? globalThis.localStorage : globalThis.sessionStorage;
     const probe = '__togas_probe__';
     storage.setItem(probe, '1');
     storage.removeItem(probe);

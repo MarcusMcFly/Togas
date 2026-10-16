@@ -1,18 +1,5 @@
-import { OUTLINE, circlePath, ellipsePath, fillStroke, label, limb, roundRectPath, shade } from './paint';
-
-/** Aspecto de una skin. Todo lo que el dibujo necesita saber de ella. */
-export interface CharacterLook {
-  skinTone: string;
-  shirt: string;
-  pants: string;
-  shoes: string;
-  backpack: string;
-  hair: 'bald' | 'thinning';
-  hairColor: string;
-  stubble: boolean;
-  /** Símbolo de la camiseta. */
-  emblem: string;
-}
+import type { CharacterLook } from '../../../core/characters/SkinDefinition';
+import { OUTLINE, circlePath, ellipsePath, fillStroke, label, limb, roundRectPath, shade } from '../../../core/art/paint';
 
 export type Mouth = 'smile' | 'grin' | 'open' | 'o' | 'grimace';
 export type Eyes = 'open' | 'happy' | 'closed' | 'wide';

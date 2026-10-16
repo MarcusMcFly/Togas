@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COLLECTIBLES, OBSTACLES } from '../config/collectibles.config';
-import type { SkinDefinition } from '../config/skins.config';
+import type { SkinDefinition } from '../../../core/characters/CharacterRegistry';
 import { CHARACTER_CANVAS, drawCharacter, drawCharacterHead } from './character';
 import {
   CITY_LAYERS, drawBuildings, drawClouds, drawPigeon, drawSky, drawSkyline, drawStreet,

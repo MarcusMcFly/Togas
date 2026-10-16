@@ -1,5 +1,5 @@
-import type { BurpVoice, FartVoice } from '../config/skins.config';
-import { Biquad, curve, makeRandom, normalize, pulseTrain, saturate, smoothNoise } from './dsp';
+import { Biquad, curve, makeRandom, normalize, pulseTrain, saturate, smoothNoise } from '../audio/dsp';
+import type { BurpVoice, FartVoice } from './SkinDefinition';
 
 /**
  * Síntesis física (simplificada) de eructos y pedos, muestra a muestra.

@@ -1,4 +1,4 @@
-import { OUTLINE, circlePath, ellipsePath, fillStroke, limb, roundRectPath, shade } from './paint';
+import { OUTLINE, circlePath, ellipsePath, fillStroke, limb, roundRectPath, shade } from '../../../core/art/paint';
 
 type Ctx = CanvasRenderingContext2D;
 

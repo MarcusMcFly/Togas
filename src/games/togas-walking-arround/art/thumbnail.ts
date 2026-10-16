@@ -1,7 +1,7 @@
-import { SKINS } from '../config/skins.config';
+import { SKINS } from '../../../core/characters/CharacterRegistry';
 import { drawCharacter } from './character';
 import { drawCollectible } from './items';
-import { label } from './paint';
+import { label } from '../../../core/art/paint';
 import { runPose } from './poses';
 
 let cached: string | null = null;

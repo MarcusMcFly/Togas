@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { renderBurp, renderFart } from '../../src/games/togas-walking-arround/audio/emissionSynth';
-import { SKINS } from '../../src/games/togas-walking-arround/config/skins.config';
+import { renderBurp, renderFart } from '../../src/core/characters/voiceSynth';
+import { SKINS } from '../../src/core/characters/CharacterRegistry';
 
 const SR = 22050;
 const [poio, marcus] = SKINS;

@@ -1,5 +1,5 @@
 import type { SoundRecipe } from '../../../core/services/AudioManager';
-import { envelope, finish, noiseSource } from './synth';
+import { envelope, finish, noiseSource } from '../../../core/audio/synth';
 
 /** Efectos cortos de interfaz y juego. */
 

@@ -2,7 +2,7 @@ import type { GameContext } from '../../core/contracts/GameContext';
 import type { SoundRecipe } from '../../core/services/AudioManager';
 import { EventBus } from '../../core/services/EventBus';
 import type { CollectibleDefinition, ObstacleDefinition } from './config/collectibles.config';
-import { DEFAULT_SKIN_ID, getSkin, type SkinDefinition } from './config/skins.config';
+import { DEFAULT_SKIN_ID, getSkin, type SkinDefinition } from '../../core/characters/CharacterRegistry';
 import type { Emission } from './systems/EmissionSystem';
 import type { SessionStats } from './systems/ScoreSystem';
 

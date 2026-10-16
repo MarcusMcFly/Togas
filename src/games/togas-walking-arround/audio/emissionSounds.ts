@@ -1,8 +1,8 @@
 import type { SoundRecipe } from '../../../core/services/AudioManager';
-import type { SkinDefinition } from '../config/skins.config';
+import type { SkinDefinition } from '../../../core/characters/CharacterRegistry';
 import type { Emission } from '../systems/EmissionSystem';
-import { renderBurp, renderFart } from './emissionSynth';
-import { finish } from './synth';
+import { renderBurp, renderFart } from '../../../core/characters/voiceSynth';
+import { finish } from '../../../core/audio/synth';
 
 /**
  * Resuelve el sonido de una emisión a partir de la skin activa: el sistema de gas

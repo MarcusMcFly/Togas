@@ -2,6 +2,7 @@ import type { GameContext } from '../core/contracts/GameContext';
 import type { GameModule } from '../core/contracts/GameModule';
 import type { GameSession } from '../core/contracts/GameSession';
 import type { AudioManager } from '../core/services/AudioManager';
+import type { CampusRunManager } from '../core/services/CampusRunManager';
 import type { InputManager } from '../core/services/InputManager';
 import type { SaveManager } from '../core/services/SaveManager';
 import type { SettingsManager } from '../core/services/SettingsManager';
@@ -17,6 +18,7 @@ export interface ShellServices {
   audio: AudioManager;
   settings: SettingsManager;
   save: SaveManager;
+  campusRun: CampusRunManager;
 }
 
 export interface ShellBranding {
@@ -116,10 +118,23 @@ export class GameShell {
           audio: this.services.audio,
           settings: this.services.settings,
           storage: this.services.save.scope(`game:${module.id}`),
+          campusRun: this.services.campusRun,
         },
         exit: () => {
           // Diferido: el juego puede pedir salir desde dentro de su propio bucle.
           if (this.active === active) queueMicrotask(() => this.exitToHub(active));
+        },
+        requestPause: () => {
+          if (this.active === active) this.pause();
+        },
+        gameTitle: (gameId) => this.registry.get(gameId)?.title ?? null,
+        launchGame: (gameId) => {
+          if (this.active !== active || !this.registry.get(gameId)) return;
+          queueMicrotask(() => {
+            if (this.active !== active) return;
+            this.teardown(active);
+            void this.launch(gameId);
+          });
         },
         setPauseAvailable: (available) => {
           active.pauseAvailable = available;
@@ -135,6 +150,12 @@ export class GameShell {
 
   private exitToHub(active: ActiveGame): void {
     if (this.active !== active) return;
+    this.teardown(active);
+    this.showHub();
+  }
+
+  /** Cierra el juego activo y lo limpia todo, sin decidir qué se muestra después. */
+  private teardown(active: ActiveGame): void {
     this.active = null;
 
     this.closePauseOverlay(active);
@@ -149,7 +170,6 @@ export class GameShell {
     this.services.audio.stopAll();
     this.services.audio.resume();
     active.frame.remove();
-    this.showHub();
   }
 
   private pause(): void {

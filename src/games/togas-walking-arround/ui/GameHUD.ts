@@ -5,7 +5,7 @@ import { GAME_CONFIG } from '../config/game.config';
 import type { TogasRuntime } from '../runtime';
 import type { HudState } from '../scenes/PlayScene';
 import { COLORS, addText } from './theme';
-import { drawPanel } from './widgets';
+import { drawPanel } from '../../../core/ui/phaser/widgets';
 
 const METER = { x: 618, y: 24, width: 230, height: 26 };
 const GAS_STOPS: ReadonlyArray<readonly [number, number]> = [

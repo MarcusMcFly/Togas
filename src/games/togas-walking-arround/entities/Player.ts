@@ -3,7 +3,7 @@ import { CHARACTER_CANVAS } from '../art/character';
 import type { SinglePose } from '../art/poses';
 import { ART_SCALE, TEX, charTex, idleAnim, runAnim } from '../art/textures';
 import { GAME_CONFIG } from '../config/game.config';
-import { REFERENCE_HEIGHT_M, type SkinDefinition } from '../config/skins.config';
+import { REFERENCE_HEIGHT_M, type SkinDefinition } from '../../../core/characters/CharacterRegistry';
 import type { RunnerSystem } from '../systems/RunnerSystem';
 import { DEPTH } from '../ui/theme';
 

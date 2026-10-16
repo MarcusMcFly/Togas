@@ -1,4 +1,4 @@
-import { circlePath, ellipsePath } from './paint';
+import { circlePath, ellipsePath } from '../../../core/art/paint';
 
 type Ctx = CanvasRenderingContext2D;
 

@@ -5,11 +5,11 @@ import { clickSound, fanfareSound } from '../audio/sfx';
 import { COLLECTIBLES } from '../config/collectibles.config';
 import { getTierPresentation } from '../config/emission.config';
 import { GAME_CONFIG } from '../config/game.config';
-import { REFERENCE_HEIGHT_M } from '../config/skins.config';
+import { REFERENCE_HEIGHT_M } from '../../../core/characters/CharacterRegistry';
 import { CityBackdrop } from '../entities/CityBackdrop';
 import type { TogasRuntime } from '../runtime';
 import { COLORS, DEPTH, addText } from '../ui/theme';
-import { createButton, drawPanel } from '../ui/widgets';
+import { createButton, drawPanel } from '../../../core/ui/phaser/widgets';
 
 /** Pantalla de resultados: puntuación, estadísticas, récord y opciones para seguir. */
 export class ResultsScene extends Phaser.Scene {
@@ -34,9 +34,15 @@ export class ResultsScene extends Phaser.Scene {
     new CityBackdrop(this).setScroll(0, 0);
     this.add.rectangle(width / 2, height / 2, width, height, COLORS.ink, 0.55).setDepth(DEPTH.overlay - 1);
 
-    const root = this.add.container(width / 2, height / 2).setDepth(DEPTH.overlay);
+    // Campus Run: si hay un juego siguiente registrado, se ofrece continuar con créditos.
+    const nextGameId = this.rt.context.services.campusRun.nextGameAfter(GAME_CONFIG.id);
+    const nextTitle = nextGameId ? this.rt.context.gameTitle(nextGameId) : null;
+    const extra = nextGameId && nextTitle ? 62 : 0;
+
+    const root = this.add.container(width / 2, height / 2 - extra / 2 + 4).setDepth(DEPTH.overlay);
     const panel = this.add.graphics();
-    drawPanel(panel, 700, 450, { radius: 24, shadow: 8 });
+    drawPanel(panel, 700, 450 + extra, { radius: 24, shadow: 8 });
+    panel.y = extra / 2;
     root.add(panel);
 
     // Personaje celebrando a la izquierda.
@@ -96,6 +102,19 @@ export class ResultsScene extends Phaser.Scene {
     root.add(createButton(this, -165, 185, 'Volver al hub', { width: 190, height: 52, fontSize: 18, fill: COLORS.paper, onClick: () => this.go(() => this.rt.context.exit()) }));
     root.add(createButton(this, 35, 185, 'Personaje', { width: 170, height: 52, fontSize: 18, fill: 0xb5e36b, onClick: () => this.go(() => this.scene.start('select')) }));
     root.add(createButton(this, 225, 185, 'Otra vez', { width: 170, height: 52, fontSize: 20, onClick: replay }));
+
+    if (nextGameId && nextTitle) {
+      const campusRun = this.rt.context.services.campusRun;
+      const credits = campusRun.creditsFor(results.score);
+      const label = `Continuar a ${nextTitle} · ${credits} ${credits === 1 ? 'crédito' : 'créditos'}`;
+      root.add(createButton(this, 0, 246, label, {
+        width: 600, height: 52, fontSize: 19, fill: 0xffd23f,
+        onClick: () => this.go(() => {
+          campusRun.offerTransfer({ sourceGameId: GAME_CONFIG.id, sourceScore: results.score, skinId: results.skinId });
+          this.rt.context.launchGame(nextGameId);
+        }),
+      }));
+    }
 
     this.input.keyboard?.on('keydown-ENTER', replay);
     this.input.keyboard?.on('keydown-SPACE', replay);

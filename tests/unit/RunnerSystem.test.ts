@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG } from '../../src/games/togas-walking-arround/config/game.config';
-import { SKINS } from '../../src/games/togas-walking-arround/config/skins.config';
+import { SKINS } from '../../src/core/characters/CharacterRegistry';
 import { RunnerSystem, jumpApex } from '../../src/games/togas-walking-arround/systems/RunnerSystem';
 
 const DT = 1 / 120;
