@@ -23,18 +23,38 @@ import { BalanceTouchController } from '../input/BalanceTouchController';
 import type { SilentClassRuntime } from '../runtime';
 import { ClassroomSimulation, PLAYER_TARGET, type ReleaseResult } from '../systems/ClassroomSimulation';
 import type { ClassroomView } from '../ui/view';
-import type { ClassroomHUD } from './ClassroomHUD';
+import type { ClassroomHUD, TutorialCard } from './ClassroomHUD';
 
 type Mode = 'play' | 'tutorial';
 type Phase = 'intro' | 'playing' | 'ending';
 type TutorialStep = 'hold' | 'balance' | 'wait' | 'release' | 'risk' | 'done';
 
-const TUTORIAL_TEXT: Record<Exclude<TutorialStep, 'done'>, string> = {
-  hold: '1 · ¡Mantén pulsada la pantalla para apretar!',
-  balance: '2 · Arrastra para centrar LAS DOS burbujas',
-  wait: '3 · Espera a que el profe mire a la pizarra…',
-  release: '4 · ¡Suelta el dedo… EN SILENCIO!',
-  risk: '¡Si pierdes el equilibrio, toda la clase lo oirá!\nToca para empezar la clase',
+const TUTORIAL_TEXT: Record<Exclude<TutorialStep, 'done'>, TutorialCard> = {
+  hold: {
+    step: 'PASO 1 DE 4',
+    title: 'Aprieta y aguanta',
+    body: 'Mantén el dedo pulsado en cualquier parte (o la barra espaciadora). No lo levantes todavía.',
+  },
+  balance: {
+    step: 'PASO 2 DE 4',
+    title: 'Centra las burbujas',
+    body: 'Sin soltar, arrastra el dedo (o usa las flechas) hasta que LAS DOS burbujas de abajo estén en el centro.',
+  },
+  wait: {
+    step: 'PASO 3 DE 4',
+    title: 'Espera tu momento',
+    body: 'Sigue apretando y centrado. Suelta solo cuando el profe se gire hacia la pizarra.',
+  },
+  release: {
+    step: 'PASO 4 DE 4',
+    title: '¡Ahora, suelta!',
+    body: 'El profe no mira y estás centrado: levanta el dedo y nadie se enterará.',
+  },
+  risk: {
+    step: '¡TUTORIAL SUPERADO!',
+    title: 'Ojo en clase',
+    body: 'Si sueltas descentrado o con el profe mirando, toda la clase lo oirá.\n\nToca para empezar la clase.',
+  },
 };
 
 const pick = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
@@ -492,8 +512,8 @@ export class ClassroomScene extends Phaser.Scene {
 
   private tutorialRelease(result: ReleaseResult): void {
     const retry = (message: string) => {
-      this.hud.toast(message, '#ffd23f', 1800);
       this.setTutorialStep('hold');
+      this.hud.tutorialHint(message);
     };
     switch (result.kind) {
       case 'ignored':

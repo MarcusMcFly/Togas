@@ -14,7 +14,17 @@ const LAYOUT = {
   vertical: { x: 618, y: 420, length: 140, thickness: 30 },
   pressure: { x: 342, y: 416, width: 26, height: 116 },
   balanceTag: { x: 480, y: 489 },
+  /** Tarjeta del tutorial: en la pared izquierda, lejos de la cara del profe y de los niveles. */
+  tutorial: { x: 12, y: 96, width: 214, padding: 11 },
 } as const;
+
+/** Contenido de la tarjeta del tutorial. */
+export interface TutorialCard {
+  /** Etiqueta pequeña de arriba, p. ej. "PASO 1 DE 4". */
+  step: string;
+  title: string;
+  body: string;
+}
 
 /**
  * HUD en una escena aparte, encima del aula: las sacudidas de cámara nunca
@@ -38,7 +48,11 @@ export class ClassroomHUD extends Phaser.Scene {
   private joystick!: Phaser.GameObjects.Graphics;
   private vignette!: Phaser.GameObjects.Graphics;
   private tutorialBox!: Phaser.GameObjects.Container;
-  private tutorialText!: Phaser.GameObjects.Text;
+  private tutorialBg!: Phaser.GameObjects.Graphics;
+  private tutorialStep!: Phaser.GameObjects.Text;
+  private tutorialTitle!: Phaser.GameObjects.Text;
+  private tutorialBody!: Phaser.GameObjects.Text;
+  private tutorialFeedback!: Phaser.GameObjects.Text;
   private toastText!: Phaser.GameObjects.Text;
   private lastScore = -1;
   private lastSeconds = -1;
@@ -90,10 +104,18 @@ export class ClassroomHUD extends Phaser.Scene {
     this.balanceTag = this.add.container(LAYOUT.balanceTag.x, LAYOUT.balanceTag.y, [this.balanceTagBar, this.balanceTagText]).setVisible(false);
 
     // Mensajes.
-    const tutorialBg = this.add.graphics();
-    drawPanel(tutorialBg, 520, 64, { radius: 18, fill: 0xfff3c4, shadow: 5 });
-    this.tutorialText = addText(this, 0, 0, '', 22, { color: COLORS.inkCss, stroke: 0, wrapWidth: 490 });
-    this.tutorialBox = this.add.container(width / 2, 128, [tutorialBg, this.tutorialText]).setVisible(false);
+    const card = LAYOUT.tutorial;
+    const wrapWidth = card.width - card.padding * 2;
+    const line = (size: number, color: string, weight = '900') =>
+      addText(this, card.padding, 0, '', size, { color, stroke: 0, align: 'left', weight, wrapWidth }).setOrigin(0);
+    this.tutorialBg = this.add.graphics();
+    this.tutorialStep = line(12, '#7a6a2e');
+    this.tutorialTitle = line(18, COLORS.inkCss);
+    this.tutorialBody = line(13, '#3b3360', '700');
+    this.tutorialFeedback = line(13, '#d62839', '800');
+    this.tutorialBox = this.add.container(card.x, card.y, [
+      this.tutorialBg, this.tutorialStep, this.tutorialTitle, this.tutorialBody, this.tutorialFeedback,
+    ]).setVisible(false);
     this.toastText = addText(this, width / 2, 96, '', 20, { stroke: 5 }).setAlpha(0);
   }
 
@@ -159,13 +181,42 @@ export class ClassroomHUD extends Phaser.Scene {
     this.tweens.add({ targets: this.toastText, alpha: 0, delay: ms, duration: 300 });
   }
 
-  tutorial(text: string | null): void {
-    this.tutorialBox.setVisible(text !== null);
-    if (text === null) return;
-    this.tutorialText.setText(text);
+  tutorial(card: TutorialCard | null): void {
+    this.tutorialBox.setVisible(card !== null);
+    if (card === null) return;
+    this.tutorialStep.setText(card.step);
+    this.tutorialTitle.setText(card.title);
+    this.tutorialBody.setText(card.body);
+    this.tutorialFeedback.setText('');
+    this.layoutTutorial();
     this.tweens.killTweensOf(this.tutorialBox);
-    this.tutorialBox.setScale(0.9);
-    this.tweens.add({ targets: this.tutorialBox, scale: 1, duration: 200, ease: 'Back.easeOut' });
+    this.tutorialBox.setAlpha(0).setX(LAYOUT.tutorial.x - 16);
+    this.tweens.add({ targets: this.tutorialBox, alpha: 1, x: LAYOUT.tutorial.x, duration: 220, ease: 'Back.easeOut' });
+  }
+
+  /** Aviso dentro de la tarjeta del tutorial (en vez de un toast sobre el profe). */
+  tutorialHint(text: string): void {
+    if (!this.tutorialBox.visible) return;
+    this.tutorialFeedback.setText(text);
+    this.layoutTutorial();
+    this.tweens.killTweensOf(this.tutorialFeedback);
+    this.tutorialFeedback.setScale(0.9);
+    this.tweens.add({ targets: this.tutorialFeedback, scale: 1, duration: 180, ease: 'Back.easeOut' });
+  }
+
+  /** Apila los textos de la tarjeta y ajusta el panel a su altura. */
+  private layoutTutorial(): void {
+    const { width, padding } = LAYOUT.tutorial;
+    let y = padding;
+    for (const [text, gap] of [[this.tutorialStep, 2], [this.tutorialTitle, 6], [this.tutorialBody, 8], [this.tutorialFeedback, 0]] as const) {
+      text.setVisible(text.text !== '');
+      if (!text.visible) continue;
+      text.setY(y);
+      y += text.height + gap;
+    }
+    const height = Math.ceil(y + padding - (this.tutorialFeedback.visible ? 0 : 8));
+    drawPanel(this.tutorialBg, width, height, { radius: 16, fill: 0xfff3c4, shadow: 5 });
+    this.tutorialBg.setPosition(width / 2, height / 2);
   }
 
   /** Latido visual (equivalente del sonido del corazón). */
