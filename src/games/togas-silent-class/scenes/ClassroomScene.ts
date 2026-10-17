@@ -119,7 +119,9 @@ export class ClassroomScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanup, this);
     this.rt.context.setPauseAvailable(true);
-    this.intro();
+    // scene.launch es diferido: el HUD aún no existe aquí. La intro usa toasts y banners,
+    // así que espera a que el HUD termine su create (si no, la clase normal se cuelga).
+    this.hud.events.once(Phaser.Scenes.Events.CREATE, this.intro, this);
   }
 
   update(time: number, deltaMs: number): void {
@@ -534,6 +536,7 @@ export class ClassroomScene extends Phaser.Scene {
   private cleanup(): void {
     this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
     this.events.off(Phaser.Scenes.Events.DESTROY, this.cleanup, this);
+    this.hud.events.off(Phaser.Scenes.Events.CREATE, this.intro, this);
     for (const off of this.unsubscribers) off();
     this.unsubscribers = [];
     this.controller?.dispose();
