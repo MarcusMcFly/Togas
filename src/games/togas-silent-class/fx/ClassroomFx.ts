@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { RES, TEX } from '../art/textures';
-import { DEPTH, addText } from '../ui/theme';
+import { COLORS, DEPTH, addText } from '../ui/theme';
 
 interface Point {
   x: number;
@@ -59,6 +59,46 @@ export class ClassroomFx {
     if (intensity >= 2) this.papers(origin, intensity * (this.lowQuality ? 2 : 4));
     if (!reducedMotion) this.scene.cameras.main.shake(220 + intensity * 90, 0.003 + intensity * 0.0025);
     else this.scene.cameras.main.flash(120, 255, 240, 200);
+  }
+
+  /**
+   * Texto de cómic con estallido detrás. `intensity` (0–1) escala el tamaño y el golpe.
+   */
+  comicText(text: string, x: number, y: number, color: string, intensity: number, reducedMotion: boolean, size = 18): void {
+    const label = addText(this.scene, 0, 0, text, Math.round(size * (0.85 + intensity * 0.5)), { color });
+    const w = label.width + 26;
+    const h = label.height + 16;
+    const spikes = 12;
+    const points: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < spikes * 2; i++) {
+      const a = (i / (spikes * 2)) * Math.PI * 2;
+      const r = i % 2 === 0 ? 1 : 0.82;
+      points.push(new Phaser.Math.Vector2(Math.cos(a) * (w / 2) * r, Math.sin(a) * (h / 2) * r));
+    }
+    const burst = this.scene.add.graphics();
+    burst.fillStyle(COLORS.ink, 0.9).fillPoints(points.map((p) => new Phaser.Math.Vector2(p.x, p.y + 3)), true);
+    burst.fillStyle(COLORS.ink, 0.85).fillPoints(points, true);
+    burst.lineStyle(2.5, Phaser.Display.Color.HexStringToColor(color).color, 1).strokePoints(points, true);
+    const box = this.scene.add.container(x, y, [burst, label]).setDepth(DEPTH.text).setAngle(Phaser.Math.FloatBetween(-8, 8));
+    if (reducedMotion) {
+      this.scene.tweens.add({ targets: box, alpha: { from: 1, to: 0 }, delay: 1100, duration: 400, onComplete: () => box.destroy() });
+      return;
+    }
+    box.setScale(0.3);
+    this.scene.tweens.add({ targets: box, scale: 1, duration: 220, ease: 'Back.easeOut' });
+    this.scene.tweens.add({
+      targets: box, y: y - 30 - intensity * 20, alpha: { from: 1, to: 0 }, delay: 900, duration: 600, ease: 'Cubic.easeIn',
+      onComplete: () => box.destroy(),
+    });
+  }
+
+  /** Bocanada que le llega a la cara a un compañero (impacto de la nube). */
+  faceHit(at: Point, color: number, intensity: number): void {
+    const n = this.lowQuality ? 2 : 3 + Math.round(intensity * 3);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      this.puff(at, { x: at.x + Math.cos(a) * 26, y: at.y + Math.sin(a) * 16 }, color, 0.5, 0.4 + intensity * 0.3, 700, i * 30);
+    }
   }
 
   floatingText(text: string, x: number, y: number, color: string, size = 22): void {

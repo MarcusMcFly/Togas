@@ -1,4 +1,5 @@
 import type { AttentionLevel, ProfessorStateId, RandomEventKind } from '../config/professor.config';
+import type { ReactionAnim } from '../config/reactions.config';
 import type { TrumpetVariant } from '../config/scoring.config';
 
 /**
@@ -31,6 +32,21 @@ export interface ClassroomEvents extends Record<string, unknown> {
   STUDENT_DROWSY: { studentId: string };
   STUDENT_FELL_ASLEEP: { studentId: string };
   STUDENT_STARTLED: { studentId: string };
+  /** Reacción de un compañero a una emisión (IMP-04). Como mucho una por compañero y emisión. */
+  STUDENT_REACTION: {
+    emissionId: number;
+    kind: 'silent' | 'trumpet';
+    studentId: string;
+    reactionId: string;
+    message: string;
+    color: string;
+    anim: ReactionAnim;
+    intensity: number;
+    bonus: number;
+    distance: number;
+  };
+  /** Titular de toda la clase para una emisión ("¡Contaminación en el aula!"…). */
+  CLASS_REACTION: { emissionId: number; kind: 'silent' | 'trumpet'; id: string; message: string; color: string; bonus: number };
   PROFESSOR_STATE: { state: ProfessorStateId; attention: AttentionLevel; targetSeatId: string | null };
   PROFESSOR_DETECTED_PLAYER: {
     reason: 'trumpet' | 'seen';
@@ -51,6 +67,7 @@ export type ScoreReason =
   | 'perfect'
   | 'highPressure'
   | 'streak'
+  | 'reaction'
   | 'clear'
   | 'trumpet'
   | 'detected';

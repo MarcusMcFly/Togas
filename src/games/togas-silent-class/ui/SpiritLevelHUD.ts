@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BALANCE_CONFIG } from '../config/balance.config';
-import type { BalanceZone } from '../systems/BalanceSystem';
+import type { LevelStatus } from '../systems/BalanceSystem';
 import { COLORS, LEVEL_COLORS, addText } from './theme';
 
 export interface SpiritLevelOptions {
@@ -13,11 +13,12 @@ export interface SpiritLevelOptions {
   label: string;
 }
 
-const ZONE_ICON: Record<BalanceZone, string> = { safe: '✓', drift: '', warning: '!', critical: '!!' };
+const ZONE_ICON: Record<LevelStatus, string> = { ready: '✓', settling: '…', drift: '', warning: '!', critical: '!!' };
 
 /**
  * Nivel de burbuja como los de obra. El color del marco indica el estado, pero
- * nunca va solo: también cambia el icono (✓ / ! / !!) y el marco vibra en crítico.
+ * nunca va solo: también cambia el icono (✓ / … / ! / !!) y el marco vibra en crítico.
+ * El verde (✓) solo aparece cuando la simulación confirma que soltar sería silencioso.
  */
 export class SpiritLevelHUD {
   private readonly g: Phaser.GameObjects.Graphics;
@@ -41,7 +42,7 @@ export class SpiritLevelHUD {
   }
 
   /** `value` en -1…1 (vertical: positivo = arriba). */
-  draw(value: number, zone: BalanceZone, active: boolean, highContrast: boolean, time: number): void {
+  draw(value: number, zone: LevelStatus, active: boolean, highContrast: boolean, time: number): void {
     const { length, thickness, orientation } = this.o;
     const palette = highContrast ? LEVEL_COLORS.contrast : LEVEL_COLORS.normal;
     const horizontal = orientation === 'horizontal';
@@ -75,9 +76,9 @@ export class SpiritLevelHUD {
       mark(s * safe, highContrast ? 4 : 3, 1);
       mark(s * BALANCE_CONFIG.warningThreshold, 1.5, 0.35);
     }
-    if (zone === 'safe') {
-      // Zona segura resaltada.
-      g.fillStyle(palette.safe, highContrast ? 0.6 : 0.35);
+    if (zone === 'ready' || zone === 'settling') {
+      // Zona segura resaltada (más intensa cuando ya está confirmada).
+      g.fillStyle(palette.ready, (highContrast ? 0.6 : 0.35) * (zone === 'ready' ? 1 : 0.5));
       const s = safe * travel;
       if (horizontal) g.fillRect(-s + jitter, -h / 2 + 2, s * 2, h - 4);
       else g.fillRect(-w / 2 + 2 + jitter, -s, w - 4, s * 2);

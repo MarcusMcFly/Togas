@@ -4,6 +4,9 @@ import { BALANCE_CONFIG } from '../../src/games/togas-silent-class/config/balanc
 import { BalanceSystem } from '../../src/games/togas-silent-class/systems/BalanceSystem';
 import { PressureSystem } from '../../src/games/togas-silent-class/systems/PressureSystem';
 
+/** Sin deriva ni inestabilidad: solo cuenta el mando. */
+const CALM = { ...BALANCE_CONFIG, curve: [{ pressure: 0, drift: 0, instability: 0 }] };
+
 /** Mando "de bot": empuja en contra de la burbuja. */
 const steer = (b: BalanceSystem) => ({
   active: true,
@@ -23,7 +26,7 @@ describe('BalanceSystem', () => {
 
   it('los ejes son independientes y la diagonal corrige los dos (GAME-002)', () => {
     const run = (x: number, y: number) => {
-      const b = new BalanceSystem({ ...BALANCE_CONFIG, baseDrift: 0, pressureDrift: 0, instability: 0, pressureInstability: 0 }, new Random(1));
+      const b = new BalanceSystem(CALM, new Random(1));
       for (let i = 0; i < 30; i++) b.update(1 / 60, { active: true, x, y }, 0, 1);
       return b.state;
     };
@@ -60,7 +63,7 @@ describe('BalanceSystem', () => {
   });
 
   it('exige 350 ms seguidos en el centro para estar estable', () => {
-    const b = new BalanceSystem({ ...BALANCE_CONFIG, baseDrift: 0, pressureDrift: 0 }, new Random(3));
+    const b = new BalanceSystem(CALM, new Random(3));
     b.update(0.2, { active: true, x: 0, y: 0 }, 0, 1);
     expect(b.isCentered).toBe(true);
     expect(b.isStable).toBe(false);

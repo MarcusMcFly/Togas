@@ -28,6 +28,8 @@ export class ScoreSystem {
   };
   private currentStreak = 0;
   private failures = 0;
+  /** Bonus de reacción ya pagados ("emisión:compañero"): nada de cobrar dos veces. */
+  private readonly reactionsPaid = new Set<string>();
   private readonly unsubscribers: Array<() => void>;
 
   constructor(private readonly bus: EventBus<ClassroomEvents>) {
@@ -68,6 +70,9 @@ export class ScoreSystem {
           this.award(SCORING.detectionPenalty, 'detected');
         }
       }),
+      // Las reacciones suman aparte: no sustituyen a los puntos por dormir a alguien.
+      bus.on('STUDENT_REACTION', (e) => this.reactionBonus(`${e.emissionId}:${e.studentId}`, e.bonus)),
+      bus.on('CLASS_REACTION', (e) => this.reactionBonus(`${e.emissionId}:class`, e.bonus)),
       bus.on('CLASSROOM_CLEARED', () => this.award(SCORING.classroomClear, 'clear')),
     ];
   }
@@ -96,6 +101,12 @@ export class ScoreSystem {
 
   dispose(): void {
     for (const off of this.unsubscribers) off();
+  }
+
+  private reactionBonus(key: string, bonus: number): void {
+    if (bonus <= 0 || this.reactionsPaid.has(key)) return;
+    this.reactionsPaid.add(key);
+    this.award(bonus, 'reaction');
   }
 
   private fail(): void {

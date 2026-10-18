@@ -1,11 +1,22 @@
 import Phaser from 'phaser';
 import { STUDENT_CANVAS } from '../art/student';
 import { RES, studentTex } from '../art/textures';
+import type { ReactionAnim } from '../config/reactions.config';
 import type { StudentSeat } from '../config/students.config';
 import type { StudentState } from '../systems/StudentReactionSystem';
 import { COLORS, DEPTH, addText } from '../ui/theme';
 
 const DREAMS = ['💤', 'z', '♪', '∑', '🍕', 'π'];
+
+/** Variantes de cada reacción, para que no se repitan siempre igual. */
+const REACTION_MARKS: Record<ReactionAnim, readonly string[]> = {
+  confused: ['?', '??', '🤔'],
+  grimace: ['🤢', '😖', '😷'],
+  gasHit: ['😵', '🥴', '😣'],
+  recoil: ['😫', '💥', '😱'],
+  deepSleep: ['💤💤', 'ZZZ', '😴'],
+  startled: ['!', '!?', '😳', '😂'],
+};
 
 /** Un compañero en pantalla. Su estado lo decide StudentReactionSystem. */
 export class Student {
@@ -47,7 +58,7 @@ export class Student {
     this.state = state;
     const tweens = this.scene.tweens;
     tweens.killTweensOf(this.sprite);
-    this.sprite.setAngle(0).setY(this.seat.y);
+    this.sprite.setAngle(0).setPosition(this.seat.x, this.seat.y);
 
     const pose = state === 'awake' ? 'awake' : state;
     this.sprite.setTexture(studentTex(this.seat.id, pose));
@@ -70,6 +81,45 @@ export class Student {
     if (state === 'asleep' && previous !== 'startled' && !reducedMotion) {
       this.sprite.setScale(1 / RES.people, 1.06 / RES.people);
       tweens.add({ targets: this.sprite, scaleY: 1 / RES.people, duration: 600, ease: 'Bounce.easeOut' });
+    }
+  }
+
+  /**
+   * Reacción cómica a una emisión (IMP-04). Va encima del estado (dormido, adormilado…)
+   * y su fuerza escala con `intensity` (0–1). Con movimiento reducido, solo el icono.
+   */
+  react(anim: ReactionAnim, intensity: number, reducedMotion: boolean): void {
+    const marks = REACTION_MARKS[anim];
+    this.flashMark(marks[Math.floor(Math.random() * marks.length)], 0.8 + intensity * 0.6);
+    if (reducedMotion) return;
+    const tweens = this.scene.tweens;
+    const s = this.seat.scale;
+    const sprite = this.sprite;
+    const home = { x: this.seat.x, y: this.seat.y };
+    const reset = () => sprite.setPosition(home.x, home.y);
+    switch (anim) {
+      case 'confused':
+        tweens.add({ targets: sprite, angle: Math.random() < 0.5 ? -5 : 5, duration: 260, yoyo: true, hold: 300, ease: 'Sine.easeInOut' });
+        break;
+      case 'grimace':
+        tweens.add({ targets: sprite, x: home.x + 2.5 * s, duration: 60, yoyo: true, repeat: 3 + Math.round(intensity * 3), onComplete: reset });
+        break;
+      case 'gasHit':
+        tweens.add({ targets: sprite, x: home.x + 4 * s, angle: -4, duration: 50, yoyo: true, repeat: 5, onComplete: reset });
+        break;
+      case 'recoil':
+        tweens.add({
+          targets: sprite, y: home.y - (10 + intensity * 14) * s, angle: Math.random() < 0.5 ? -8 : 8,
+          duration: 140, yoyo: true, hold: 120, ease: 'Quad.easeOut', onComplete: reset,
+        });
+        break;
+      case 'deepSleep':
+        sprite.setScale(1 / RES.people, 1.14 / RES.people);
+        tweens.add({ targets: sprite, scaleY: 1 / RES.people, duration: 900, ease: 'Bounce.easeOut' });
+        break;
+      case 'startled':
+        // El bote ya lo hace el estado `startled`.
+        break;
     }
   }
 
@@ -103,10 +153,10 @@ export class Student {
     cycle();
   }
 
-  private flashMark(text: string): void {
+  private flashMark(text: string, size = 1): void {
     this.scene.tweens.killTweensOf(this.mark);
-    this.mark.setText(text).setAlpha(1).setScale(0.5);
-    this.scene.tweens.add({ targets: this.mark, scale: 1.1, duration: 160, ease: 'Back.easeOut' });
+    this.mark.setText(text).setAlpha(1).setScale(0.5 * size);
+    this.scene.tweens.add({ targets: this.mark, scale: 1.1 * size, duration: 160, ease: 'Back.easeOut' });
     this.scene.tweens.add({ targets: this.mark, alpha: 0, delay: 900, duration: 300 });
   }
 }

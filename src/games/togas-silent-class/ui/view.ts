@@ -1,7 +1,8 @@
 import type { Expression } from '../art/seatedPlayer';
 import type { AttentionLevel } from '../config/professor.config';
 import type { JoystickView } from '../input/BalanceTouchController';
-import type { BalanceZone } from '../systems/BalanceSystem';
+import type { LevelStatus } from '../systems/BalanceSystem';
+import type { ReleaseReadiness } from '../systems/ClassroomSimulation';
 
 /** Todo lo que el HUD lee en cada fotograma. Lo rellena ClassroomScene. */
 export interface ClassroomView {
@@ -19,10 +20,12 @@ export interface ClassroomView {
   pressure: number;
   horizontal: number;
   vertical: number;
-  zoneH: BalanceZone;
-  zoneV: BalanceZone;
+  zoneH: LevelStatus;
+  zoneV: LevelStatus;
   holding: boolean;
-  centered: boolean;
+  /** Soltar ahora sería silencioso (misma comprobación que la liberación). */
+  ready: boolean;
+  blocked: ReleaseReadiness['blocked'];
   /** 0–1 hacia los 350 ms de confirmación. */
   stability: number;
   attention: AttentionLevel;

@@ -5,7 +5,7 @@ import { GAME_CONFIG } from '../config/game.config';
 import { AttentionIndicator } from '../ui/AttentionIndicator';
 import { PressureMeter } from '../ui/PressureMeter';
 import { SpiritLevelHUD } from '../ui/SpiritLevelHUD';
-import { COLORS, addText } from '../ui/theme';
+import { COLORS, LEVEL_COLORS, addText } from '../ui/theme';
 import type { ClassroomView } from '../ui/view';
 
 /** Disposición del HUD (spec 14.2). Los niveles van abajo, en el centro. */
@@ -249,18 +249,21 @@ export class ClassroomHUD extends Phaser.Scene {
 
   private drawBalanceTag(): void {
     const v = this.view;
-    const show = v.showLevels && v.holding && v.centered;
+    const recovering = v.blocked === 'recovering';
+    const show = v.showLevels && v.holding && (v.stability > 0 || recovering);
     this.balanceTag.setVisible(show);
     if (!show) return;
-    const done = v.stability >= 1;
+    // Mismo criterio que la liberación: "listo" solo si soltar sería silencioso.
+    const done = v.ready;
     const w = done ? 190 : 120;
     const g = this.balanceTagBar;
     g.clear();
     g.fillStyle(COLORS.ink, 1).fillRoundedRect(-w / 2, -10 + 3, w, 20, 10);
     g.fillStyle(0xffffff, 1).fillRoundedRect(-w / 2, -10, w, 20, 10);
-    g.fillStyle(v.highContrast ? 0x00e5ff : 0x8bd450, 1).fillRoundedRect(-w / 2, -10, Math.max(20, w * v.stability), 20, 10);
+    const palette = v.highContrast ? LEVEL_COLORS.contrast : LEVEL_COLORS.normal;
+    g.fillStyle(done ? palette.ready : palette.settling, 1).fillRoundedRect(-w / 2, -10, Math.max(20, w * v.stability), 20, 10);
     g.lineStyle(2, COLORS.ink, 1).strokeRoundedRect(-w / 2, -10, w, 20, 10);
-    this.balanceTagText.setText(done ? '✓ ¡EQUILIBRIO PERFECTO!' : 'Equilibrando…');
+    this.balanceTagText.setText(done ? '✓ ¡LISTO! SUELTA' : recovering ? 'Recuperando aire…' : 'Equilibrando…');
   }
 
   private drawJoystick(): void {

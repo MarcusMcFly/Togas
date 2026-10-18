@@ -12,6 +12,7 @@ import { BALANCE_CONFIG } from '../config/balance.config';
 import { GAME_CONFIG } from '../config/game.config';
 import { PRESSURE_CONFIG } from '../config/pressure.config';
 import { PROFESSOR_DIALOGUE } from '../config/professor.config';
+import { REACTION_CONFIG } from '../config/reactions.config';
 import { EMISSION_TIERS, SUCCESS_LINES, TRUMPET_VARIANTS } from '../config/scoring.config';
 import { STUDENT_SEATS } from '../config/students.config';
 import { Classroom } from '../entities/Classroom';
@@ -124,7 +125,7 @@ export class ClassroomScene extends Phaser.Scene {
       mode: this.mode, skinId: skin.id, expression: 'calm', score: 0, timeLeft: GAME_CONFIG.session.durationSec,
       streak: 0, multiplier: 1, asleep: 0, totalStudents: STUDENT_SEATS.length,
       strikesLeft: GAME_CONFIG.session.maxStrikes, maxStrikes: GAME_CONFIG.session.maxStrikes,
-      pressure: 0, horizontal: 0, vertical: 0, zoneH: 'safe', zoneV: 'safe', holding: false, centered: true, stability: 0,
+      pressure: 0, horizontal: 0, vertical: 0, zoneH: 'settling', zoneV: 'settling', holding: false, ready: false, blocked: 'notHolding', stability: 0,
       attention: 'away', attentionProgress: 0, attentionEmphasis: this.rt.perk === 'professorNotes' && !tutorial,
       silence: false, joystick: { active: false, originX: 0, originY: 0, thumbX: 0, thumbY: 0 },
       highContrast: this.rt.preferences.highContrast, showLevels: !tutorial,
@@ -278,10 +279,36 @@ export class ClassroomScene extends Phaser.Scene {
     });
 
     on('STUDENT_FELL_ASLEEP', ({ studentId }) => {
-      const student = this.students.get(studentId);
-      if (!student) return;
       this.lastStudentId = studentId;
-      this.fx.wisp(this.player.rear, { x: student.headX, y: student.headY }, this.cloudColor);
+    });
+
+    // Reacciones (IMP-04): la nube viaja hasta cada compañero y reacciona al llegar.
+    const shown = { emissionId: -1, messages: 0 };
+    on('STUDENT_REACTION', (e) => {
+      const student = this.students.get(e.studentId);
+      if (!student) return;
+      if (shown.emissionId !== e.emissionId) Object.assign(shown, { emissionId: e.emissionId, messages: 0 });
+      const order = shown.messages++;
+      const head = { x: student.headX, y: student.headY };
+      const silent = e.kind === 'silent';
+      const color = this.cloudColor;
+      if (silent) this.fx.wisp(this.player.rear, head, color);
+      const delay = silent ? Math.max(150, (e.distance / REACTION_CONFIG.cloudSpeed) * 1000) : 120 + order * 60;
+      this.time.delayedCall(delay, () => {
+        student.react(e.anim, e.intensity, this.rt.reducedMotion);
+        if (silent && e.intensity >= 0.5) this.fx.faceHit(head, color, e.intensity);
+        if (order >= REACTION_CONFIG.maxMessages) return;
+        const text = e.bonus > 0 ? `${e.message} +${e.bonus}` : e.message;
+        this.fx.comicText(text, head.x, head.y - 44 * student.seat.scale, e.color, e.intensity, this.rt.reducedMotion);
+      });
+    });
+
+    on('CLASS_REACTION', (e) => {
+      const text = e.bonus > 0 ? `${e.message} +${e.bonus}` : e.message;
+      if (e.id === 'silentApocalypse') this.fx.silentCloud(this.player.rear, 720, this.cloudColor, this.rt.reducedMotion);
+      this.time.delayedCall(e.kind === 'silent' ? 750 : 450, () => {
+        this.fx.comicText(text, GAME_CONFIG.view.width / 2, 210, e.color, 1, this.rt.reducedMotion, 26);
+      });
     });
 
     on('TRUMPET_EMISSION', (e) => {
@@ -321,7 +348,8 @@ export class ClassroomScene extends Phaser.Scene {
     });
 
     on('SCORE_AWARDED', ({ points, reason }) => {
-      if (points === 0) return;
+      // Las reacciones ya enseñan su bonus en su propio texto de cómic.
+      if (points === 0 || reason === 'reaction') return;
       const text = points > 0 ? `+${points}` : `${points}`;
       const color = points > 0 ? '#ffd23f' : '#ff8fa3';
       if (reason === 'student' && this.lastStudentId) {
@@ -374,6 +402,8 @@ export class ClassroomScene extends Phaser.Scene {
         }
         this.hud.banner('¡A CLASE!', '#8bd450', 80, 400);
         this.rt.play(goBeep);
+        // IMP-01: el arranque es tranquilo; se aprovecha para recordar el control.
+        this.time.delayedCall(700, () => this.hud.toast('Mantén pulsado y arrastra: centra las dos burbujas', '#ffffff', 2200));
         this.phase = 'playing';
         if (this.controller) this.controller.enabled = true;
       });
@@ -430,11 +460,14 @@ export class ClassroomScene extends Phaser.Scene {
     v.pressure = sim.pressure.value;
     v.horizontal = horizontal;
     v.vertical = vertical;
-    v.zoneH = sim.balance.zoneOf(horizontal);
-    v.zoneV = sim.balance.zoneOf(vertical);
+    // HUD y liberación leen la misma instantánea (IMP-03).
+    const readiness = sim.readiness;
+    v.zoneH = readiness.horizontal;
+    v.zoneV = readiness.vertical;
     v.holding = holding;
-    v.centered = sim.balance.isCentered;
-    v.stability = sim.balance.stability;
+    v.ready = readiness.ready;
+    v.blocked = readiness.blocked;
+    v.stability = readiness.stability;
     v.attention = sim.professor.attention;
     v.attentionProgress = sim.professor.progress;
     v.silence = sim.professor.isSilent;
