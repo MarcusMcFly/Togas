@@ -4,9 +4,19 @@ import { RES, TEX, faceTex } from '../art/textures';
 import { clickSound } from '../audio/sfx';
 import { GAME_CONFIG } from '../config/game.config';
 import type { SilentClassRuntime } from '../runtime';
+import type { EndReason } from '../systems/events';
 import { COLORS, DEPTH, addText } from '../ui/theme';
 
-const HEADLINES = { time: '¡CLASE TERMINADA!', expelled: '¡EXPULSADO DE CLASE!', cleared: '¡TODA LA CLASE DORMIDA!' } as const;
+const HEADLINES: Record<EndReason, string> = {
+  time: '¡CLASE TERMINADA!',
+  expelled: '¡EXPULSADO DE CLASE!',
+  cleared: '¡TODA LA CLASE DORMIDA!',
+  // Finales que solo se dan en la campaña (no pasan por esta pantalla, pero el tipo los incluye).
+  caught: '¡TE HA PILLADO!',
+  fallen: '¡TRES CAÍDAS, UNA EXPULSIÓN!',
+  defeated: '¡ARISTÓCRATA NEUTRALIZADO!',
+  bankrupt: '¡SIN PUNTOS!',
+};
 
 /** Resultados: puntuación, estadísticas reales de la partida, título y Campus Run. */
 export class ResultsScene extends Phaser.Scene {

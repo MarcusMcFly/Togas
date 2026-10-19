@@ -1,3 +1,5 @@
+import { GestureBinding, type GestureOptions } from './GestureInput';
+
 export interface PrimaryActionOptions {
   /** Elemento donde un toque o clic cuenta como acción (normalmente el contenedor del juego). */
   target: HTMLElement;
@@ -91,12 +93,19 @@ export class PrimaryAction {
 
 /** Crea acciones y lleva la cuenta de las activas para poder limpiarlas todas al salir de un juego. */
 export class InputManager {
-  private readonly active = new Set<PrimaryAction>();
+  private readonly active = new Set<{ dispose(): void }>();
 
   bindPrimaryAction(options: PrimaryActionOptions): PrimaryAction {
     const action = new PrimaryAction(options, (a) => this.active.delete(a));
     this.active.add(action);
     return action;
+  }
+
+  /** Toque y deslizamiento hacia abajo con un solo dedo (ver GestureBinding). */
+  bindGestures(options: GestureOptions): GestureBinding {
+    const binding = new GestureBinding(options, (b) => this.active.delete(b));
+    this.active.add(binding);
+    return binding;
   }
 
   get activeBindings(): number {

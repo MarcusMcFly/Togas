@@ -20,6 +20,8 @@ interface Pedestrian {
   state: State;
   worldX: number;
   walkSpeed: number;
+  /** Sentido del paseo en el mundo: -1 hacia el jugador, +1 en su mismo sentido. */
+  direction: number;
   reactUntil: number;
   fleeDirection: number;
 }
@@ -28,16 +30,24 @@ interface Pedestrian {
 const PERSON_HEIGHT = 112;
 const FACE_SCALE = 1.25 / ART_SCALE;
 
+export interface CrowdOptions {
+  /** Pasean en ambos sentidos (si no, todos van hacia el jugador). */
+  bothWays: boolean;
+}
+
 /**
  * Viandantes que pasean por la acera y reaccionan a los pedos con sorpresa,
  * cabreo (ambos con la cara ampliada en una viñeta) o saliendo corriendo.
- * Es decorado: no afecta al juego.
+ * En la partida normal son decorado; las reglas de calle los cuentan como testigos.
  */
 export class PedestrianCrowd {
   private readonly people: Pedestrian[] = [];
   private nextSpawnAt: number = PEDESTRIAN_CONFIG.spawnEvery[0];
 
-  constructor(private readonly scene: Phaser.Scene) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly options: CrowdOptions = { bothWays: false },
+  ) {
     for (let i = 0; i < PEDESTRIAN_CONFIG.maxActive; i++) {
       const look = PEDESTRIAN_LOOKS[0];
       const sprite = scene.add
@@ -49,7 +59,7 @@ export class PedestrianCrowd {
       const label = addText(scene, 0, 0, '', 18).setDepth(DEPTH.fx - 1).setVisible(false);
       this.people.push({
         look, sprite, face, label, active: false, serial: 0, state: 'walk',
-        worldX: 0, walkSpeed: 0, reactUntil: 0, fleeDirection: 1,
+        worldX: 0, walkSpeed: 0, direction: -1, reactUntil: 0, fleeDirection: 1,
       });
     }
   }
@@ -65,7 +75,7 @@ export class PedestrianCrowd {
 
     for (const p of this.people) {
       if (!p.active) continue;
-      if (p.state === 'walk') p.worldX -= p.walkSpeed * dt;
+      if (p.state === 'walk') p.worldX += p.direction * p.walkSpeed * dt;
       else if (p.state === 'flee') p.worldX += p.fleeDirection * PEDESTRIAN_CONFIG.fleeSpeed * dt;
       else if (now >= p.reactUntil) this.walk(p);
 
@@ -79,10 +89,22 @@ export class PedestrianCrowd {
     }
   }
 
-  /** Un pedo de nivel `tier` en `originX` (pantalla): reaccionan los que estén dentro del radio. */
-  react(originX: number, tier: number, reducedMotion: boolean): void {
+  /** Viandantes visibles a menos de `radius` píxeles de `originX` (pantalla). */
+  countWithin(originX: number, radius: number): number {
+    let count = 0;
+    for (const p of this.people) {
+      if (p.active && Math.abs(p.sprite.x - originX) <= radius) count++;
+    }
+    return count;
+  }
+
+  /**
+   * Un pedo de nivel `tier` en `originX` (pantalla): reaccionan los que estén dentro del
+   * radio. Por defecto el radio crece con el nivel; las reglas de calle pasan el suyo.
+   */
+  react(originX: number, tier: number, reducedMotion: boolean, radiusOverride?: number): void {
     const { base, perTier } = PEDESTRIAN_CONFIG.reactionRadius;
-    const radius = base + perTier * tier;
+    const radius = radiusOverride ?? base + perTier * tier;
     const weights = PEDESTRIAN_CONFIG.reactionWeights[Math.min(Math.max(tier, 1), 5) - 1];
     for (const p of this.people) {
       if (!p.active || p.state === 'flee') continue;
@@ -107,6 +129,7 @@ export class PedestrianCrowd {
     p.serial++;
     p.worldX = worldX;
     p.walkSpeed = min + Math.random() * (max - min);
+    p.direction = this.options.bothWays && Math.random() < 0.45 ? 1 : -1;
     p.sprite.setScale(look.scale / ART_SCALE).setVisible(true).setAngle(0).setY(GAME_CONFIG.groundY);
     this.walk(p);
   }
@@ -114,8 +137,8 @@ export class PedestrianCrowd {
   private walk(p: Pedestrian): void {
     p.state = 'walk';
     this.hideBubble(p);
-    // Dibujados mirando a la derecha: pasean hacia la izquierda, hacia el jugador.
-    p.sprite.setFlipX(true).setAngle(0);
+    // Dibujados mirando a la derecha: se voltean si pasean hacia la izquierda (hacia el jugador).
+    p.sprite.setFlipX(p.direction < 0).setAngle(0);
     p.sprite.play(pedWalkAnim(p.look.id), true);
   }
 

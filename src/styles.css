@@ -191,6 +191,30 @@ body {
   margin-top: 4px;
 }
 
+.card--featured {
+  position: relative;
+  background: linear-gradient(160deg, #fff3c4, var(--paper) 45%);
+  border-color: var(--ink);
+  box-shadow: 0 6px 0 var(--ink), 0 0 0 4px rgba(255, 210, 63, 0.55), 0 0 32px rgba(179, 136, 255, 0.45);
+}
+
+.card__badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  padding: 4px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--accent-2);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 3px 0 var(--ink);
+}
+
 .card--soon {
   align-items: center;
   justify-content: center;
@@ -365,6 +389,650 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .btn {
+    transition: none;
+  }
+}
+
+/* ---------- Modo campaña ---------- */
+
+.campaign {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(255, 138, 61, 0.18), transparent 35%),
+    radial-gradient(circle at 15% 85%, rgba(179, 136, 255, 0.2), transparent 40%),
+    linear-gradient(180deg, #120f2e, #2a2058);
+  /* El contenedor del juego bloquea el scroll táctil; las pantallas de la campaña sí lo necesitan. */
+  touch-action: pan-y;
+}
+
+.campaign__mission {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #120f24;
+}
+
+.camp-screen {
+  min-height: 100%;
+  padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left));
+}
+
+.camp-panel {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.camp-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.camp-kicker {
+  margin: 0 0 4px;
+  color: var(--accent-2);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.camp-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 6vw, 2.8rem);
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--paper);
+  text-shadow: 0 3px 0 var(--ink);
+}
+
+.camp-subtitle {
+  margin: 0 0 20px;
+  color: #c9c2e6;
+  line-height: 1.45;
+}
+
+.camp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.camp-actions .btn {
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+  padding-block: 8px;
+}
+
+.camp-notice {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: #3b3360;
+  color: var(--paper);
+  line-height: 1.4;
+}
+
+.camp-notice--warn {
+  background: #6b4a12;
+}
+
+.camp-notice--danger {
+  background: #7a1f3a;
+}
+
+.camp-fade {
+  animation: camp-fade-in 600ms ease both;
+}
+
+@keyframes camp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Intro */
+
+.camp-intro {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(1px 1px at 12% 20%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 12%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 40% 34%, #ffd23f 50%, transparent 51%),
+    radial-gradient(1px 1px at 86% 48%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 22% 66%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 60% 78%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 93% 88%, #fff 50%, transparent 51%),
+    radial-gradient(circle at 50% 120%, rgba(255, 138, 61, 0.35), transparent 55%);
+}
+
+.camp-intro__skip {
+  align-self: flex-start;
+}
+
+.camp-intro__stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: 240px;
+  padding: 24px 0;
+  cursor: pointer;
+  text-align: center;
+}
+
+.camp-intro__text {
+  max-width: 720px;
+  margin: 0;
+  font-size: clamp(1.25rem, 4.2vw, 2rem);
+  font-weight: 800;
+  line-height: 1.35;
+  text-shadow: 0 3px 0 var(--ink);
+}
+
+.camp-intro__text--aside {
+  color: var(--accent-2);
+  font-style: italic;
+  font-size: clamp(1.5rem, 6vw, 2.6rem);
+}
+
+.camp-intro__roster {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 72px));
+  gap: 6px;
+  justify-content: center;
+  width: 100%;
+}
+
+.camp-intro__roster[hidden] {
+  display: none;
+}
+
+.camp-intro__hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0.75;
+}
+
+.camp-intro__hero--chosen img {
+  opacity: 1;
+  filter: drop-shadow(0 0 12px rgba(255, 210, 63, 0.9));
+  animation: camp-bounce 900ms ease-in-out infinite alternate;
+}
+
+@keyframes camp-bounce {
+  to {
+    transform: translateY(-6px);
+  }
+}
+
+.camp-intro__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.camp-intro__dots {
+  display: flex;
+  gap: 6px;
+}
+
+.camp-intro__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4a3f80;
+}
+
+.camp-intro__dot--on {
+  background: var(--accent-2);
+}
+
+/* Plantel */
+
+.roster {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster > li {
+  display: flex;
+}
+
+.roster__slot {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 12px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  font: inherit;
+  text-align: center;
+}
+
+.roster__slot--open {
+  background: linear-gradient(180deg, #fff3c4, var(--paper));
+  color: var(--ink);
+  box-shadow: 0 5px 0 var(--ink), 0 0 0 3px rgba(255, 210, 63, 0.6);
+  cursor: pointer;
+  transition: transform 100ms ease;
+}
+
+.roster__slot--open:hover,
+.roster__slot--open:focus-visible {
+  transform: translateY(-3px);
+  outline: none;
+}
+
+.roster__slot--locked {
+  background: rgba(59, 51, 96, 0.6);
+  border-style: dashed;
+  border-color: #5a4f8c;
+  color: #8f87b5;
+}
+
+.roster__img {
+  width: 100%;
+  max-width: 110px;
+  height: auto;
+}
+
+.roster__name {
+  font-weight: 900;
+  font-size: 1.05rem;
+}
+
+.roster__state {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* Perfil */
+
+.profile {
+  display: grid;
+  grid-template-columns: minmax(140px, 260px) 1fr;
+  gap: 20px;
+  padding: 20px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 6px 0 var(--ink);
+}
+
+.profile__art {
+  align-self: start;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 60%, #ffe7a3, #ffd23f 70%);
+  border: 3px solid var(--ink);
+}
+
+.profile__art img {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+
+.profile__name {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.profile__title {
+  margin: 4px 0 6px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #b3261e;
+}
+
+.profile__archetype {
+  margin: 0 0 12px;
+  color: #5a4f78;
+  font-size: 0.9rem;
+}
+
+.profile__bio {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.profile__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 14px 0;
+}
+
+.profile__facts dt {
+  font-weight: 800;
+  color: #5a4f78;
+}
+
+.profile__facts dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.profile__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+/* Mapa del capítulo */
+
+.chapter-map {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-map::before {
+  content: '';
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: 31px;
+  border-left: 4px dashed #5a4f8c;
+}
+
+.mission-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 0;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.mission-node__code {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-left: 8px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--accent-2);
+  font-weight: 900;
+}
+
+.mission-node__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mission-node__title {
+  font-size: 1.1rem;
+}
+
+.mission-node__meta {
+  color: #5a4f78;
+  font-size: 0.85rem;
+}
+
+.mission-node__state {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #efe4d0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mission-node--completed .mission-node__code {
+  background: var(--gas);
+}
+
+.mission-node--available {
+  box-shadow: 0 5px 0 var(--ink), 0 0 0 4px rgba(255, 138, 61, 0.7);
+}
+
+.mission-node--available .mission-node__state {
+  background: var(--accent);
+}
+
+.mission-node--inProgress .mission-node__state {
+  background: #ffd23f;
+}
+
+.mission-node--locked,
+.mission-node--notImplemented {
+  background: #d9d1c2;
+  color: #5a4f78;
+}
+
+.mission-node--locked .mission-node__code,
+.mission-node--notImplemented .mission-node__code {
+  background: #b8b0a3;
+}
+
+.chapter-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0 12px;
+  margin: 18px 0 0;
+}
+
+.chapter-stats dt {
+  color: #c9c2e6;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.chapter-stats dd {
+  margin: 2px 0 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.chapter-stats__score {
+  color: var(--accent-2);
+}
+
+/* Briefing y resultados */
+
+.briefing__story p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+  color: #e8e2ff;
+}
+
+.briefing__score {
+  margin: 12px 0;
+  font-size: 1.05rem;
+}
+
+.briefing__score strong {
+  color: var(--accent-2);
+  font-size: 1.3rem;
+}
+
+.briefing__hint {
+  color: #c9c2e6;
+  font-size: 0.9rem;
+}
+
+.briefing__block {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.briefing__heading {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.briefing__list {
+  margin: 0;
+  padding-left: 1.2em;
+  line-height: 1.5;
+}
+
+.results--win .results__headline {
+  color: var(--gas);
+}
+
+.results--fail .results__headline {
+  color: #ff8fa3;
+}
+
+.results-score {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.results-score > div {
+  padding: 12px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: center;
+}
+
+.results-score dt {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #5a4f78;
+}
+
+.results-score dd {
+  margin: 4px 0 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.results-score .is-gain {
+  color: #2f8a2f;
+}
+
+.results-score .is-loss {
+  color: #c1121f;
+}
+
+.results-score__total {
+  color: #ff8a3d;
+}
+
+.stat-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.stat-table th,
+.stat-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e6dcc8;
+  text-align: left;
+}
+
+.stat-table tr:last-child th,
+.stat-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stat-table th {
+  font-weight: 700;
+  color: #5a4f78;
+}
+
+.stat-table td {
+  font-weight: 900;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile {
+    grid-template-columns: 1fr;
+  }
+
+  .profile__art img {
+    max-width: 160px;
+  }
+
+  .mission-node {
+    grid-template-columns: 56px 1fr;
+  }
+
+  .mission-node__state {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .camp-intro__roster {
+    grid-template-columns: repeat(4, minmax(0, 64px));
+  }
+
+  .results-score {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .camp-fade,
+  .camp-intro__hero--chosen img {
+    animation: none;
+  }
+
+  .roster__slot--open {
     transition: none;
   }
 }

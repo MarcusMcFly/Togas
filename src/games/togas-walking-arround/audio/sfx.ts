@@ -97,3 +97,27 @@ export const fanfareSound: SoundRecipe = (ctx, destination) => {
     stop: (fade) => parts.forEach((p) => p.stop(fade)),
   };
 };
+
+/** Rodar: un "fiuuu" grave. */
+export const rollSound = tone('sawtooth', 240, 90, 0.22, 0.06);
+
+/** Golpe contra un obstáculo. */
+export const bumpSound = tone('square', 160, 60, 0.16, 0.12);
+
+/** Emisión sin testigos: arpegio ascendente corto. */
+export const cleanEmissionSound: SoundRecipe = (ctx, destination) => {
+  const notes = [660, 830, 990].map((f, i) => tone('triangle', f, f * 1.02, 0.09, 0.14, i * 0.07)(ctx, destination));
+  return {
+    endsAt: Math.max(...notes.map((n) => n.endsAt)),
+    stop: (fade) => notes.forEach((n) => n.stop(fade)),
+  };
+};
+
+/** Sirena de policía (dos tonos alternos). */
+export const sirenSound: SoundRecipe = (ctx, destination) => {
+  const notes = [0, 1, 2, 3].map((i) => tone('square', i % 2 ? 620 : 820, i % 2 ? 600 : 800, 0.22, 0.05, i * 0.24)(ctx, destination));
+  return {
+    endsAt: Math.max(...notes.map((n) => n.endsAt)),
+    stop: (fade) => notes.forEach((n) => n.stop(fade)),
+  };
+};

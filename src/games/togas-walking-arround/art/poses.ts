@@ -7,7 +7,7 @@ import { pose, type Pose } from './character';
 export const RUN_FRAMES = 6;
 export const IDLE_FRAMES = 2;
 
-export type SinglePose = 'jump' | 'fall' | 'land' | 'collect' | 'burp' | 'fart' | 'strong' | 'hit';
+export type SinglePose = 'jump' | 'fall' | 'land' | 'collect' | 'burp' | 'fart' | 'strong' | 'hit' | 'roll';
 
 export function runPose(frame: number): Pose {
   const phase = (frame / RUN_FRAMES) * Math.PI * 2;
@@ -33,4 +33,6 @@ export const SINGLE_POSES: Record<SinglePose, Pose> = {
   fart: pose({ lean: 0.35, crouch: 6, legSwing: 0.2, mouth: 'o', eyes: 'closed' }),
   strong: pose({ armsUp: 1, crouch: 4, lean: -0.05, mouth: 'open', eyes: 'wide', cheeks: true }),
   hit: pose({ crouch: 4, lean: -0.15, armSwing: 0.7, mouth: 'grimace', eyes: 'wide' }),
+  // Hecho una bola para pasar por debajo de los obstáculos.
+  roll: pose({ crouch: 32, tuck: 0.25, lean: 1.1, armSwing: 0.9, mouth: 'o', eyes: 'closed' }),
 };

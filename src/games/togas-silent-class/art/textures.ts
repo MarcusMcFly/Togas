@@ -56,7 +56,12 @@ export function deskRows(): DeskRow[] {
 }
 
 /** Texturas comunes a todas las partidas. Se generan una vez por sesión, en BootScene. */
-export function generateTextures(scene: Phaser.Scene, skins: readonly SkinDefinition[], playerSeat: { x: number; y: number }): void {
+export function generateTextures(
+  scene: Phaser.Scene,
+  skins: readonly SkinDefinition[],
+  playerSeat: { x: number; y: number },
+  options: { aristocrat?: boolean } = {},
+): void {
   const t = scene.textures;
   paintTexture(t, TEX.background, CLASSROOM.width, CLASSROOM.height, RES.background, drawClassroom);
 
@@ -76,7 +81,9 @@ export function generateTextures(scene: Phaser.Scene, skins: readonly SkinDefini
   }
 
   const P = PROFESSOR_CANVAS;
-  for (const frame of PROFESSOR_FRAMES) paintTexture(t, professorTex(frame), P.width, P.height, RES.people, (ctx) => drawProfessor(ctx, frame));
+  for (const frame of PROFESSOR_FRAMES) {
+    paintTexture(t, professorTex(frame), P.width, P.height, RES.people, (ctx) => drawProfessor(ctx, frame, options.aristocrat));
+  }
 
   paintTexture(t, TEX.puff, FX_CANVAS.puff, FX_CANVAS.puff, RES.fx, drawPuff);
   paintTexture(t, TEX.ring, FX_CANVAS.ring, FX_CANVAS.ring, RES.fx, drawRing);

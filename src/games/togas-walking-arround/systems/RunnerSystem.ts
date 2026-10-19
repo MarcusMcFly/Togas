@@ -8,6 +8,8 @@ export interface RunnerParams {
   minJumpVelocity: number;
   coyoteTimeSec: number;
   jumpBufferSec: number;
+  /** Rodar (opcional): duración y velocidad de caída rápida si se pide en el aire. */
+  roll?: { durationSec: number; fastFallVelocity: number };
 }
 
 /**
@@ -29,10 +31,19 @@ export class RunnerSystem {
   /** Se activan durante un único `update()`, útiles para animaciones y sonidos. */
   justJumped = false;
   justLanded = false;
+  justRolled = false;
+  /** Rodando: la caja de colisión es más baja. */
+  rolling = false;
+  /** Velocidad extra (acelerones) que se suma a la de la partida. */
+  speedBonus = 0;
+  /** Tope de velocidad, acelerones incluidos. */
+  speedCap = Number.POSITIVE_INFINITY;
 
   private coyoteTimer = 0;
   private bufferTimer = 0;
   private jumpHeld = false;
+  private rollTimer = 0;
+  private rollQueued = false;
 
   constructor(private readonly params: RunnerParams) {
     this.speed = params.startSpeed;
@@ -41,6 +52,19 @@ export class RunnerSystem {
   pressJump(): void {
     this.bufferTimer = this.params.jumpBufferSec;
     this.jumpHeld = true;
+  }
+
+  /** Rodar. En el aire, cae rápido y rueda al aterrizar. Sin parámetros de rodar no hace nada. */
+  pressRoll(): void {
+    const roll = this.params.roll;
+    if (!roll) return;
+    this.bufferTimer = 0;
+    if (this.grounded) {
+      this.startRoll(roll.durationSec);
+      return;
+    }
+    this.rollQueued = true;
+    this.velocityY = Math.min(this.velocityY, -roll.fastFallVelocity);
   }
 
   releaseJump(): void {
@@ -56,8 +80,10 @@ export class RunnerSystem {
     const p = this.params;
     this.justJumped = false;
     this.justLanded = false;
+    this.justRolled = false;
 
-    this.speed = p.startSpeed + (p.maxSpeed - p.startSpeed) * clamp(progress, 0, 1);
+    const base = p.startSpeed + (p.maxSpeed - p.startSpeed) * clamp(progress, 0, 1);
+    this.speed = Math.min(this.speedCap, base + this.speedBonus);
     this.distance += this.speed * dt;
 
     this.coyoteTimer = this.grounded ? p.coyoteTimeSec : this.coyoteTimer - dt;
@@ -70,6 +96,9 @@ export class RunnerSystem {
         this.coyoteTimer = 0;
         this.bufferTimer = 0;
         this.justJumped = true;
+        // Saltar interrumpe el rodar.
+        this.rolling = false;
+        this.rollTimer = 0;
       }
     }
 
@@ -81,8 +110,24 @@ export class RunnerSystem {
         this.velocityY = 0;
         this.grounded = true;
         this.justLanded = true;
+        if (this.rollQueued && p.roll) this.startRoll(p.roll.durationSec);
       }
     }
+
+    if (this.rolling) {
+      this.rollTimer -= dt;
+      if (this.rollTimer <= 0) {
+        this.rolling = false;
+        this.rollTimer = 0;
+      }
+    }
+  }
+
+  private startRoll(durationSec: number): void {
+    this.rollQueued = false;
+    this.rolling = true;
+    this.rollTimer = durationSec;
+    this.justRolled = true;
   }
 
   reset(): void {
@@ -96,6 +141,11 @@ export class RunnerSystem {
     this.coyoteTimer = 0;
     this.bufferTimer = 0;
     this.jumpHeld = false;
+    this.justRolled = false;
+    this.rolling = false;
+    this.rollTimer = 0;
+    this.rollQueued = false;
+    this.speedBonus = 0;
   }
 }
 

@@ -62,7 +62,8 @@ export class GameHub {
 
   private gameCard(game: GameModule): HTMLElement {
     const launch = () => this.options.onLaunch(game.id);
-    const card = h('article', { className: 'card' }, [
+    const card = h('article', { className: game.badge ? 'card card--featured' : 'card' }, [
+      game.badge ? h('span', { className: 'card__badge', text: game.badge }) : null,
       h('img', { className: 'card__thumb', attrs: { src: game.thumbnail, alt: '', draggable: 'false' } }),
       h('div', { className: 'card__body' }, [
         h('h2', { className: 'card__title', text: game.title }),

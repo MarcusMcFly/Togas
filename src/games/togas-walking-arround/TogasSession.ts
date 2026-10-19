@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { GameContext } from '../../core/contracts/GameContext';
 import type { GameSession } from '../../core/contracts/GameSession';
 import { GAME_CONFIG } from './config/game.config';
-import { TogasRuntime } from './runtime';
+import { TogasRuntime, type WalkingMission } from './runtime';
 import { BootScene } from './scenes/BootScene';
 import { PlayScene } from './scenes/PlayScene';
 import { ResultsScene } from './scenes/ResultsScene';
@@ -17,8 +17,11 @@ export class TogasSession implements GameSession {
   private game: Phaser.Game | null = null;
   private readonly runtime: TogasRuntime;
 
-  constructor(private readonly context: GameContext) {
-    this.runtime = new TogasRuntime(context);
+  constructor(
+    private readonly context: GameContext,
+    mission: WalkingMission | null = null,
+  ) {
+    this.runtime = new TogasRuntime(context, mission);
   }
 
   start(): void {
@@ -38,7 +41,7 @@ export class TogasSession implements GameSession {
         autoCenter: Phaser.Scale.CENTER_BOTH,
       },
       render: { antialias: true, roundPixels: false },
-      scene: [new BootScene(), new SelectScene(rt), new PlayScene(rt), new GameHUD(rt), new ResultsScene(rt)],
+      scene: [new BootScene(rt), new SelectScene(rt), new PlayScene(rt), new GameHUD(rt), new ResultsScene(rt)],
     });
   }
 

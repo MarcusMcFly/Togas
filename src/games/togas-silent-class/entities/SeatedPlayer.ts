@@ -13,6 +13,8 @@ export interface PlayerFrameInput {
   pressureRatio: number;
   holding: boolean;
   reducedMotion: boolean;
+  /** 0–1: la silla se tambalea (aviso de caída en la campaña). */
+  tilt?: number;
 }
 
 /**
@@ -99,7 +101,10 @@ export class SeatedPlayer {
     this.butt.setScale(SCALE / RES.people * (1 - v * 0.04), SCALE / RES.people * (1 + v * 0.06));
     this.torso.setPosition(jx, -v * 9 * PX + jy);
     this.torso.setAngle(h * 7);
-    if (!this.scene.tweens.isTweening(this.container)) this.container.setAngle(h * 2.5);
+    // La silla se tambalea hacia el lado del desequilibrio: aviso claro antes de caer.
+    const tilt = input.tilt ?? 0;
+    const wobble = tilt > 0 ? Math.sign(h || v || 1) * tilt * 12 + Math.sin(time * 0.05) * tilt * 3 : 0;
+    if (!this.scene.tweens.isTweening(this.container)) this.container.setAngle(h * 2.5 + wobble);
     this.container.y = this.y + this.lift;
 
     if (p > 0.6 && time > this.nextSweat) {

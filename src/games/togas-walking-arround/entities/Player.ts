@@ -9,7 +9,7 @@ import { DEPTH } from '../ui/theme';
 
 /** Prioridad de las posturas especiales: una de mayor prioridad no se interrumpe por otra menor. */
 const PRIORITY: Record<SinglePose, number> = {
-  land: 1, collect: 2, hit: 3, burp: 4, fart: 4, strong: 5, jump: 0, fall: 0,
+  land: 1, collect: 2, hit: 3, burp: 4, fart: 4, strong: 5, jump: 0, fall: 0, roll: 0,
 };
 
 /**
@@ -81,10 +81,14 @@ export class Player {
     this.shadow.setAlpha(1 - lift * 0.6);
 
     if (this.special && this.scene.time.now >= this.specialUntil) this.special = null;
-    const pose = this.special ?? (runner.grounded ? null : runner.velocityY > 0 ? 'jump' : 'fall');
+    const pose = this.special ?? (runner.rolling ? 'roll' : runner.grounded ? null : runner.velocityY > 0 ? 'jump' : 'fall');
     if (pose) {
       this.sprite.anims.stop();
       this.sprite.setTexture(charTex(this.skin.id, pose));
+    } else if (runner.speed < 1) {
+      // Parado (p. ej. al llegar a la meta).
+      this.sprite.play(idleAnim(this.skin.id), true);
+      this.sprite.anims.timeScale = 1;
     } else {
       this.sprite.play(runAnim(this.skin.id), true);
       // Las piernas van más rápido cuanto más rápido corre.

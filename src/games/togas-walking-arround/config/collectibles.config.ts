@@ -27,6 +27,15 @@ export const COLLECTIBLES: readonly CollectibleDefinition[] = [
 ];
 
 /**
+ * Comida que no aparece en la partida normal: solo la usan los modos que la piden
+ * en su reglamento (p. ej. la campaña de Pollo). Su arte se genera siempre.
+ */
+export const LENTILS: CollectibleDefinition = { id: 'lentils', name: 'Lentejas', gas: 30, score: 100, spawnWeight: 1 };
+
+/** Todo lo que se puede dibujar como comida. */
+export const ALL_COLLECTIBLES: readonly CollectibleDefinition[] = [...COLLECTIBLES, LENTILS];
+
+/**
  * "Aerored" es una marca real: el ID se conserva por la spec, pero el producto que se
  * ve en pantalla es un antigás inventado ("Antigás Forte") para no usar marcas sin permiso.
  */

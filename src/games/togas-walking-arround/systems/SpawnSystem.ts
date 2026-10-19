@@ -3,9 +3,13 @@ import type { Random } from '../../../core/utils/Random';
 
 export type Lane = 'ground' | 'low' | 'mid' | 'high';
 
+export type BarrierAction = 'jump' | 'roll';
+
 export type PatternSlot =
   | { kind: 'collectible'; dx: number; lane: Lane }
-  | { kind: 'obstacle'; dx: number };
+  | { kind: 'obstacle'; dx: number }
+  /** Obstáculo de recorrido (saltar o rodar). Si no hay ninguno de ese tipo en el catálogo, se omite. */
+  | { kind: 'barrier'; dx: number; action: BarrierAction };
 
 export interface SpawnPattern {
   id: string;
@@ -30,7 +34,7 @@ export interface SpawnCatalogEntry {
 }
 
 export interface SpawnRequest {
-  kind: 'collectible' | 'obstacle';
+  kind: 'collectible' | 'obstacle' | 'barrier';
   typeId: string;
   /** Posición X (centro) en coordenadas de mundo. */
   x: number;
@@ -38,11 +42,16 @@ export interface SpawnRequest {
   height: number;
 }
 
+export type BarrierCatalog = Readonly<Record<BarrierAction, readonly SpawnCatalogEntry[]>>;
+
+const NO_BARRIERS: BarrierCatalog = { jump: [], roll: [] };
+
 /**
  * Generación procedural y justa del recorrido.
  *
- * Encadena patrones al azar. Regla de oro: entre dos obstáculos siempre hay al menos
- * `minObstacleGap` píxeles, así nunca hay combinaciones imposibles de esquivar (AC-14).
+ * Encadena patrones al azar. Regla de oro: entre dos obstáculos (antigases u obstáculos
+ * de recorrido) siempre hay al menos `minObstacleGap` píxeles, así nunca hay
+ * combinaciones imposibles de esquivar (AC-14).
  * Con la misma semilla genera siempre lo mismo (tests reproducibles).
  */
 export class SpawnSystem {
@@ -55,6 +64,7 @@ export class SpawnSystem {
     private readonly obstacles: readonly SpawnCatalogEntry[],
     private readonly rng: Random,
     readonly minObstacleGap: number,
+    private readonly barriers: BarrierCatalog = NO_BARRIERS,
   ) {
     this.nextX = config.leadIn;
   }
@@ -70,7 +80,7 @@ export class SpawnSystem {
 
     // Si el patrón trae un obstáculo demasiado cerca del anterior, se retrasa entero.
     let firstObstacleDx = Number.POSITIVE_INFINITY;
-    for (const slot of pattern.slots) if (slot.kind === 'obstacle') firstObstacleDx = Math.min(firstObstacleDx, slot.dx);
+    for (const slot of pattern.slots) if (this.isObstacle(slot)) firstObstacleDx = Math.min(firstObstacleDx, slot.dx);
     if (Number.isFinite(firstObstacleDx)) {
       const earliest = this.lastObstacleX + this.minObstacleGap - firstObstacleDx;
       if (start < earliest) start = earliest;
@@ -83,6 +93,11 @@ export class SpawnSystem {
       if (slot.kind === 'obstacle') {
         out.push({ kind: 'obstacle', typeId: this.pickType(this.obstacles), x, height: 0 });
         this.lastObstacleX = Math.max(this.lastObstacleX, x);
+      } else if (slot.kind === 'barrier') {
+        const catalog = this.barriers[slot.action];
+        if (catalog.length === 0) continue;
+        out.push({ kind: 'barrier', typeId: this.pickType(catalog), x, height: 0 });
+        this.lastObstacleX = Math.max(this.lastObstacleX, x);
       } else {
         out.push({ kind: 'collectible', typeId: this.pickType(this.collectibles), x, height: this.config.lanes[slot.lane] });
       }
@@ -91,6 +106,10 @@ export class SpawnSystem {
     const minGap = lerp(this.config.gapStart[0], this.config.gapEnd[0], progress);
     const maxGap = lerp(this.config.gapStart[1], this.config.gapEnd[1], progress);
     this.nextX = start + width + this.rng.range(minGap, maxGap);
+  }
+
+  private isObstacle(slot: PatternSlot): boolean {
+    return slot.kind === 'obstacle' || (slot.kind === 'barrier' && this.barriers[slot.action].length > 0);
   }
 
   private choosePattern(progress: number): SpawnPattern {

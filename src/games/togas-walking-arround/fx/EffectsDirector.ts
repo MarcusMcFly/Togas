@@ -23,6 +23,7 @@ export class EffectsDirector {
   private readonly rings: Phaser.GameObjects.Image[] = [];
   private readonly texts: Phaser.GameObjects.Text[] = [];
   private readonly flashRect: Phaser.GameObjects.Rectangle;
+  private readonly sirenRect: Phaser.GameObjects.Rectangle;
   /** En dispositivos lentos se reducen las partículas. */
   lowQuality = false;
 
@@ -71,6 +72,7 @@ export class EffectsDirector {
 
     const { width, height } = GAME_CONFIG.view;
     this.flashRect = scene.add.rectangle(width / 2, height / 2, width, height, 0xfff6d5, 1).setDepth(DEPTH.overlay).setAlpha(0);
+    this.sirenRect = scene.add.rectangle(width / 2, height / 2, width, height, 0xff2d55, 1).setDepth(DEPTH.overlay).setAlpha(0);
   }
 
   emission(emission: Emission, origin: { x: number; y: number }, reducedMotion: boolean): void {
@@ -96,6 +98,33 @@ export class EffectsDirector {
         this.scene.tweens.add({ targets: this.flashRect, alpha: 0, duration: 380, ease: 'Quad.easeOut' });
       }
     }
+  }
+
+  /** Anillo que marca el alcance de una emisión (lo que cuenta para los testigos). */
+  radius(origin: { x: number; y: number }, radius: number, color: string): void {
+    this.ring(origin, radius, color);
+  }
+
+  /** Destellos rojo y azul de sirena. Con "reducir movimiento", un único destello suave. */
+  siren(reducedMotion: boolean, flashes = 4): void {
+    const rect = this.sirenRect;
+    this.scene.tweens.killTweensOf(rect);
+    if (reducedMotion) {
+      rect.setFillStyle(0xff2d55).setAlpha(0.18);
+      this.scene.tweens.add({ targets: rect, alpha: 0, duration: 600 });
+      return;
+    }
+    for (let i = 0; i < flashes; i++) {
+      this.scene.time.delayedCall(i * 220, () => {
+        rect.setFillStyle(i % 2 === 0 ? 0xff2d55 : 0x3a86ff).setAlpha(0.28);
+        this.scene.tweens.add({ targets: rect, alpha: 0, duration: 200 });
+      });
+    }
+  }
+
+  /** Polvareda al rodar. */
+  dust(x: number, y: number): void {
+    this.fizzEmitter.explode(this.lowQuality ? 4 : 8, x, y);
   }
 
   /** Texto flotante pequeño (p. ej. "+100"). */

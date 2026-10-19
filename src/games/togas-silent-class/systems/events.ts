@@ -58,6 +58,16 @@ export interface ClassroomEvents extends Record<string, unknown> {
   RANDOM_EVENT: { kind: RandomEventKind; seatId: string | null };
   SCORE_AWARDED: { points: number; reason: ScoreReason };
   CLASSROOM_CLEARED: Record<string, never>;
+  /** La silla empieza a tambalearse (equilibrio crítico): aviso antes de la caída. */
+  CHAIR_WOBBLE: Record<string, never>;
+  /** Caída de la silla: se pierde el gas acumulado. */
+  CHAIR_FALL: { fallCount: number; maxFalls: number };
+  /** Liberación con el profe mirando (reglas de pillada inmediata). */
+  CAUGHT_RED_HANDED: { kind: 'silent' | 'trumpet' };
+  /** Todos los compañeros fuera de combate: el profe pasa a ser el objetivo. */
+  PROFESSOR_TARGETED: Record<string, never>;
+  /** Liberación final con éxito sobre el profe. */
+  ARISTOCRAT_DEFEATED: Record<string, never>;
   SESSION_ENDED: { reason: EndReason };
 }
 
@@ -72,4 +82,9 @@ export type ScoreReason =
   | 'trumpet'
   | 'detected';
 
-export type EndReason = 'time' | 'expelled' | 'cleared';
+/**
+ * - `time`, `expelled`, `cleared`: partida normal.
+ * - `caught`, `fallen`, `defeated`, `bankrupt`: reglas de campaña (pillada inmediata,
+ *   tres caídas, profe derrotado, puntuación de campaña a cero).
+ */
+export type EndReason = 'time' | 'expelled' | 'cleared' | 'caught' | 'fallen' | 'defeated' | 'bankrupt';

@@ -27,6 +27,9 @@ export function drawCollectible(ctx: Ctx, id: string): void {
     case 'soda':
       drawCan(ctx, '#8a5cf6', '#5b34c4', 'FIZZ', '#ffffff');
       break;
+    case 'lentils':
+      drawLentils(ctx);
+      break;
     default:
       circlePath(ctx, 26, 26, 16);
       fillStroke(ctx, '#cccccc');
@@ -88,6 +91,43 @@ function drawFabada(ctx: Ctx): void {
   fillStroke(ctx, '#3b1f1f', 1.2);
   // Raya decorativa de la cazuela.
   ctx.strokeStyle = shade('#a9521f', 0.3);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(11, 35);
+  ctx.quadraticCurveTo(26, 40, 41, 35);
+  ctx.stroke();
+}
+
+/** Plato de lentejas con chorizo y zanahoria: la comida estrella de Pollo. */
+function drawLentils(ctx: Ctx): void {
+  steam(ctx, [16, 26, 36], 2);
+  bowl(ctx, '#f1e3c6', '#c46a2b', '#6e4a24');
+  const lentils: ReadonlyArray<readonly [number, number]> = [
+    [12, 25], [16, 23], [20, 26], [24, 23], [28, 25], [32, 23], [36, 25], [40, 24],
+    [14, 27], [18, 21], [26, 27], [30, 21], [34, 27], [38, 22], [22, 22],
+  ];
+  lentils.forEach(([x, y], i) => {
+    ellipsePath(ctx, x, y, 2.2, 1.5, i * 0.7);
+    ctx.fillStyle = i % 3 === 0 ? '#9b7a3f' : i % 3 === 1 ? '#7d6a32' : '#a9874a';
+    ctx.fill();
+  });
+  // Rodajas de chorizo y dados de zanahoria.
+  for (const [x, y] of [[19, 24], [33, 25]] as const) {
+    circlePath(ctx, x, y, 3.3);
+    fillStroke(ctx, '#c0392b', 1.2);
+    circlePath(ctx, x - 0.8, y - 0.8, 0.9);
+    ctx.fillStyle = '#f5b7a8';
+    ctx.fill();
+  }
+  for (const [x, y] of [[27, 23], [12, 24], [39, 26]] as const) {
+    roundRectPath(ctx, x - 1.8, y - 1.6, 3.6, 3.2, 0.8);
+    fillStroke(ctx, '#ff9f1c', 1);
+  }
+  // Una hoja de laurel.
+  ellipsePath(ctx, 24, 20, 4.5, 1.8, -0.4);
+  fillStroke(ctx, '#5aa548', 1);
+  // Cenefa del plato.
+  ctx.strokeStyle = shade('#c46a2b', 0.35);
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(11, 35);

@@ -45,6 +45,19 @@ describe('Arquitectura', () => {
     expect(violations).toEqual([]);
   });
 
+  it('ni los minijuegos ni el núcleo dependen de la campaña (spec 10.5)', () => {
+    const violations = files
+      .filter((f) => f.startsWith(`${ROOT}games/`) || f.startsWith(`${ROOT}core/`))
+      .flatMap((f) => importsOf(f).filter((t) => t.startsWith('campaign/')).map((t) => `${f} → ${t}`));
+    expect(violations).toEqual([]);
+  });
+
+  it('la campaña ocupa la tercera entrada del hub, tras los dos juegos (CAM-001)', () => {
+    const main = SOURCES[`${ROOT}main.ts`];
+    const order = [...main.matchAll(/registry\.register\((\w+)\)/g)].map((m) => m[1]);
+    expect(order.slice(0, 3)).toEqual(['togasWalkingArround', 'togasSilentClass', 'togasCampaign']);
+  });
+
   it('las skins no tienen lógica propia en los juegos (sin `skin === "pollo"`)', () => {
     const offenders = files.filter((f) => f.startsWith(`${ROOT}games/`) && /===\s*['"](pollo|marcus)['"]/.test(SOURCES[f]));
     expect(offenders).toEqual([]);

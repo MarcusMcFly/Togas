@@ -4,7 +4,7 @@ import { GAME_CONFIG } from '../config/game.config';
 import { DEPTH } from '../ui/theme';
 
 /**
- * Base de todo lo que aparece en el recorrido (comida y antigases).
+ * Base de todo lo que aparece en el recorrido (comida, antigases y obstáculos).
  * Se reutilizan desde un pool: `activate()` lo saca, `deactivate()` lo devuelve.
  */
 export abstract class WorldObject<Def extends { id: string }> {
@@ -31,7 +31,7 @@ export abstract class WorldObject<Def extends { id: string }> {
     this.active = true;
     this.consumed = false;
     this.scene.tweens.killTweensOf(this.sprite);
-    this.sprite.setTexture(itemTex(def.id)).setVisible(true).setAlpha(1).setScale(1 / ART_SCALE).setAngle(0);
+    this.sprite.setTexture(this.textureFor(def)).setVisible(true).setAlpha(1).setScale(1 / ART_SCALE).setAngle(0);
     this.shadow.setVisible(true).setAlpha(1);
     this.onActivate();
   }
@@ -52,6 +52,9 @@ export abstract class WorldObject<Def extends { id: string }> {
   }
 
   protected abstract layout(screenX: number, time: number): void;
+  protected textureFor(def: Def): string {
+    return itemTex(def.id);
+  }
   protected onActivate(): void {}
   protected onDeactivate(): void {}
 }

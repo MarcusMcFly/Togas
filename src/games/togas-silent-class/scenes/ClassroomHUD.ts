@@ -54,6 +54,8 @@ export class ClassroomHUD extends Phaser.Scene {
   private tutorialBody!: Phaser.GameObjects.Text;
   private tutorialFeedback!: Phaser.GameObjects.Text;
   private toastText!: Phaser.GameObjects.Text;
+  private chairWarning!: Phaser.GameObjects.Text;
+  private lastTarget: boolean | null = null;
   private lastScore = -1;
   private lastSeconds = -1;
   private lastAsleep = -1;
@@ -70,7 +72,9 @@ export class ClassroomHUD extends Phaser.Scene {
     this.view = data.view;
     this.lastScore = this.lastSeconds = this.lastAsleep = this.lastStrikes = this.lastStreak = -1;
     this.lastExpression = '';
+    this.lastTarget = null;
     const { width } = GAME_CONFIG.view;
+    const campaign = this.view.campaign !== null;
 
     this.vignette = this.add.graphics();
     this.joystick = this.add.graphics();
@@ -81,7 +85,7 @@ export class ClassroomHUD extends Phaser.Scene {
     avatar.fillStyle(COLORS.paper, 1).fillCircle(42, 42, 32);
     avatar.lineStyle(3, COLORS.ink, 1).strokeCircle(42, 42, 32);
     this.portrait = this.add.image(42, 42, faceTex(this.view.skinId, 'calm')).setScale(0.85 / RES.fx);
-    addText(this, 84, 20, 'PUNTOS', 13, { align: 'left', stroke: 4 });
+    addText(this, 84, 20, campaign ? 'RESERVA DE PUNTOS' : 'PUNTOS', 13, { align: 'left', stroke: 4 });
     this.scoreText = addText(this, 84, 44, '0', 28, { align: 'left', color: COLORS.yellowCss });
     this.timerText = addText(this, 84, 74, '', 18, { align: 'left', stroke: 4 });
     this.comboText = addText(this, 160, 74, '', 16, { align: 'left', color: '#b5e36b', stroke: 4 });
@@ -91,7 +95,7 @@ export class ClassroomHUD extends Phaser.Scene {
 
     // Derecha: dormidos y avisos.
     this.asleepText = addText(this, width - 18, 22, '', 18, { align: 'right', color: '#b9a7ff', stroke: 4 });
-    addText(this, width - 128, 52, 'AVISOS', 13, { align: 'right', stroke: 4 });
+    addText(this, width - 128, 52, campaign ? 'CAÍDAS' : 'AVISOS', 13, { align: 'right', stroke: 4 });
     this.strikes = this.add.graphics();
 
     // Abajo: niveles de burbuja y gas.
@@ -117,6 +121,8 @@ export class ClassroomHUD extends Phaser.Scene {
       this.tutorialBg, this.tutorialStep, this.tutorialTitle, this.tutorialBody, this.tutorialFeedback,
     ]).setVisible(false);
     this.toastText = addText(this, width / 2, 96, '', 20, { stroke: 5 }).setAlpha(0);
+    this.chairWarning = addText(this, GAME_CONFIG.playerSeat.x, GAME_CONFIG.playerSeat.y - 175, '⚠ ¡LA SILLA!', 22, { color: '#ff9f1c', stroke: 5 })
+      .setAlpha(0);
   }
 
   update(time: number, deltaMs: number): void {
@@ -129,22 +135,30 @@ export class ClassroomHUD extends Phaser.Scene {
       this.scoreText.setText(v.score.toLocaleString('es-ES'));
       if (grew) this.tweens.add({ targets: this.scoreText, scale: { from: 1.2, to: 1 }, duration: 200 });
     }
-    const seconds = Math.ceil(v.timeLeft);
+    // En la campaña no hay límite: el reloj cuenta hacia arriba (cada segundo cuesta puntos).
+    const seconds = v.campaign ? Math.floor(v.campaign.elapsed) : Math.ceil(v.timeLeft);
     if (seconds !== this.lastSeconds) {
       this.lastSeconds = seconds;
       this.timerText.setText(v.mode === 'tutorial' ? 'Práctica' : `⏱ ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
-      this.timerText.setColor(v.mode === 'play' && seconds <= 10 ? '#ff4d6d' : '#ffffff');
+      this.timerText.setColor(v.mode === 'play' && !v.campaign && seconds <= 10 ? '#ff4d6d' : '#ffffff');
     }
-    if (v.streak !== this.lastStreak) {
+    if (!v.campaign && v.streak !== this.lastStreak) {
       this.lastStreak = v.streak;
       this.comboText.setText(v.streak > 0 ? `Racha ${v.streak} · ×${v.multiplier.toFixed(1)}` : '');
       if (v.streak > 0) this.tweens.add({ targets: this.comboText, scale: { from: 1.3, to: 1 }, duration: 240, ease: 'Back.easeOut' });
     }
-    if (v.asleep !== this.lastAsleep) {
+    const target = v.campaign?.professorTarget ?? false;
+    if (v.asleep !== this.lastAsleep || target !== this.lastTarget) {
       this.lastAsleep = v.asleep;
-      this.asleepText.setText(`💤 Dormidos ${v.asleep} / ${v.totalStudents}`);
+      this.lastTarget = target;
+      const label = !v.campaign
+        ? `💤 Dormidos ${v.asleep} / ${v.totalStudents}`
+        : target ? '🎩 ¡A por el profe!' : `🎯 Compañeros K.O. ${v.asleep} / ${v.totalStudents}`;
+      this.asleepText.setText(label).setColor(target ? '#ffd23f' : '#b9a7ff');
       this.tweens.add({ targets: this.asleepText, scale: { from: 1.2, to: 1 }, duration: 220 });
     }
+    const tilt = v.campaign?.tilt ?? 0;
+    this.chairWarning.setAlpha(tilt > 0 ? 0.55 + Math.abs(Math.sin(time * 0.012)) * 0.45 : 0).setScale(1 + tilt * 0.35);
     if (v.strikesLeft !== this.lastStrikes) {
       this.lastStrikes = v.strikesLeft;
       this.drawStrikes();

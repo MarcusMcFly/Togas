@@ -66,6 +66,11 @@ export class SaveScope {
       // Ídem.
     }
   }
+
+  /** Sub-almacén dentro de este (p. ej. los datos de un juego cuando se juega como misión). */
+  scope(name: string): SaveScope {
+    return new SaveScope(this.store, `${this.prefix}${name}:`);
+  }
 }
 
 export class SaveManager {

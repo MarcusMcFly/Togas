@@ -4,6 +4,7 @@ import { BALANCE_CONFIG } from '../config/balance.config';
 import { GAME_CONFIG } from '../config/game.config';
 import type { PerkId } from '../config/perks.config';
 import { REACTION_CONFIG } from '../config/reactions.config';
+import { STANDALONE_CLASSROOM_RULES, type ClassroomRules } from '../config/ruleset';
 import { performanceTitle } from '../config/scoring.config';
 import { STUDENT_SEATS, STUDENT_TIMINGS } from '../config/students.config';
 import { BalanceSystem, type LevelStatus } from './BalanceSystem';
@@ -25,6 +26,8 @@ export interface SimulationOptions {
    * mira no hace nada (se puede repetir sin castigo).
    */
   tutorial: boolean;
+  /** Reglamento (por defecto, el de la partida normal). */
+  rules?: ClassroomRules;
 }
 
 /** Qué ha pasado al levantar el dedo. */
@@ -51,6 +54,12 @@ export interface ReleaseReadiness {
 
 export interface ClassroomResults extends ClassroomStats {
   totalStudents: number;
+  /** Caídas de la silla (solo con reglas de silla). */
+  chairFalls: number;
+  /** Presión más alta alcanzada en toda la clase (0–100). */
+  peakPressure: number;
+  /** Segundos de clase jugados. */
+  elapsedSec: number;
   /** Precisión media del equilibrio (0–1). */
   accuracy: number;
   completion: number;
@@ -86,8 +95,14 @@ export class ClassroomSimulation {
   private readonly input = { x: 0, y: 0 };
   private elapsedSec = 0;
   private endReason: EndReason | null = null;
+  readonly rules: ClassroomRules;
+  private criticalSec = 0;
+  private fallCount = 0;
+  private peak = 0;
+  private targetingProfessor = false;
 
   constructor(private readonly options: SimulationOptions) {
+    this.rules = options.rules ?? STANDALONE_CLASSROOM_RULES;
     this.rng = new Random(options.seed);
     this.flavorRng = new Random((options.seed ^ 0x5eed1e55) >>> 0);
     this.difficulty = new DifficultySystem(options.perk, options.forgiving);
@@ -115,8 +130,33 @@ export class ClassroomSimulation {
     return this.elapsedSec;
   }
 
+  /** Tiempo restante; sin límite de tiempo es infinito. */
   get timeLeft(): number {
-    return Math.max(0, GAME_CONFIG.session.durationSec - this.elapsedSec);
+    const limit = this.rules.timeLimitSec;
+    return limit === null ? Number.POSITIVE_INFINITY : Math.max(0, limit - this.elapsedSec);
+  }
+
+  get falls(): number {
+    return this.fallCount;
+  }
+
+  /** 0–1: cuánto falta para caerse de la silla (para avisar en pantalla). */
+  get chairTilt(): number {
+    const chair = this.rules.chair;
+    return chair ? Math.min(1, this.criticalSec / chair.criticalSec) : 0;
+  }
+
+  /** El profe ya es el objetivo (todos los compañeros fuera de combate). */
+  get professorIsTarget(): boolean {
+    return this.targetingProfessor;
+  }
+
+  /** ¿Está el profe mirando a la clase? (regla de pillada inmediata). */
+  get professorLooking(): boolean {
+    const attention = this.professor.attention;
+    if (attention === 'facing' || attention === 'watching' || attention === 'investigating') return true;
+    if (attention === 'turning') return this.professor.facing >= this.rules.lookingFrom;
+    return false;
   }
 
   get isHolding(): boolean {
@@ -212,8 +252,9 @@ export class ClassroomSimulation {
     if (this.endReason) return;
     if (!this.options.tutorial) {
       this.elapsedSec += dt;
-      if (this.elapsedSec >= GAME_CONFIG.session.durationSec) {
-        this.elapsedSec = GAME_CONFIG.session.durationSec;
+      const limit = this.rules.timeLimitSec;
+      if (limit !== null && this.elapsedSec >= limit) {
+        this.elapsedSec = limit;
         this.end('time');
         return;
       }
@@ -230,7 +271,10 @@ export class ClassroomSimulation {
     if (this.balance.justStabilized) this.bus.emit('BALANCE_STABILIZED', {});
     if (this.balance.justLost) this.bus.emit('BALANCE_LOST', {});
 
+    if (this.updateChair(dt)) return;
+
     const pressure = this.pressure.update(dt, this.current.pressureRate);
+    this.peak = Math.max(this.peak, this.pressure.value);
     if (pressure.enteredCritical) this.bus.emit('GAS_PRESSURE_CRITICAL', { pressure: this.pressure.value });
     if (pressure.forced) {
       this.holding = false;
@@ -251,14 +295,60 @@ export class ClassroomSimulation {
       totalStudents,
       accuracy,
       completion: stats.studentsKnockedOut / totalStudents,
+      chairFalls: this.fallCount,
+      peakPressure: Math.round(this.peak),
+      elapsedSec: this.elapsedSec,
       endReason: this.endReason ?? 'time',
       title: performanceTitle({ ...stats, totalStudents, accuracy }),
     };
   }
 
+  /** Termina la partida desde fuera (p. ej. la campaña se ha quedado sin puntos). */
+  abort(reason: EndReason): void {
+    this.end(reason);
+  }
+
   dispose(): void {
     this.score.dispose();
     this.bus.clear();
+  }
+
+  /**
+   * Silla: apretando con una burbuja en zona crítica, la silla se tambalea (aviso) y, si
+   * dura `criticalSec`, el protagonista se cae y pierde el gas. Devuelve `true` si la
+   * caída ha terminado la partida.
+   */
+  private updateChair(dt: number): boolean {
+    const chair = this.rules.chair;
+    if (!chair || this.options.tutorial || !this.holding || this.pressure.inRecovery) {
+      this.criticalSec = 0;
+      return false;
+    }
+    const { horizontal, vertical } = this.balance.state;
+    const critical = this.balance.zoneOf(horizontal) === 'critical' || this.balance.zoneOf(vertical) === 'critical';
+    if (!critical) {
+      this.criticalSec = 0;
+      return false;
+    }
+    if (this.criticalSec === 0) this.bus.emit('CHAIR_WOBBLE', {});
+    this.criticalSec += dt;
+    if (this.criticalSec < chair.criticalSec) return false;
+
+    this.criticalSec = 0;
+    this.fallCount++;
+    this.holding = false;
+    this.setInput(0, 0);
+    this.pressure.vent(GAME_CONFIG.session.recoverySec);
+    this.balance.resetPosition();
+    this.bus.emit('CHAIR_FALL', { fallCount: this.fallCount, maxFalls: chair.maxFalls });
+    if (this.fallCount >= chair.maxFalls) {
+      this.end('fallen');
+      return true;
+    }
+    // El estruendo llama la atención del profe; con la penúltima caída, además, vigila más.
+    this.professor.investigate(PLAYER_TARGET);
+    if (this.fallCount === chair.maxFalls - 1) this.professor.heighten();
+    return false;
   }
 
   private byDistance(ids: readonly string[]): string[] {
@@ -275,11 +365,15 @@ export class ClassroomSimulation {
   private emit(outcome: EmissionOutcome): void {
     this.emissionCount++;
     const holdSec = this.pressure.holdSec;
+    // Se decide con el estado del profe del último paso, el mismo que se ve en pantalla.
+    const caught = this.rules.detection === 'instantFail' && !this.options.tutorial && this.professorLooking;
+    const finalBlow = this.targetingProfessor;
     this.pressure.vent(GAME_CONFIG.session.recoverySec);
     this.balance.resetPosition();
 
     if (outcome.kind === 'silent') {
-      const detected = !this.options.tutorial && this.stealth.noticesSilent(this.professor.detectionChance());
+      const detected = caught
+        || (this.rules.detection === 'strikes' && !this.options.tutorial && this.stealth.noticesSilent(this.professor.detectionChance()));
       this.bus.emit('SILENT_EMISSION', {
         pressure: outcome.pressure, tier: outcome.tier.tier, perfect: outcome.perfect, detected, holdSec,
       });
@@ -293,8 +387,21 @@ export class ClassroomSimulation {
         affected: this.byDistance([...cloud.asleep, ...cloud.drowsy]), asleep: cloud.asleep, trumpetIntensity: 0,
         rewarded: !detected || REACTION_CONFIG.bonusWhenDetected,
       }, this.flavorRng), 'silent');
+      if (caught) {
+        this.catchRedHanded('silent');
+        return;
+      }
       if (detected) this.strike('seen');
-      if (!this.endReason && !this.options.tutorial && this.students.allAsleep) {
+      if (this.endReason || this.options.tutorial) return;
+      if (this.rules.objective === 'studentsThenProfessor') {
+        if (finalBlow) {
+          this.bus.emit('ARISTOCRAT_DEFEATED', {});
+          this.end('defeated');
+        } else if (this.students.allAsleep) {
+          this.targetingProfessor = true;
+          this.bus.emit('PROFESSOR_TARGETED', {});
+        }
+      } else if (this.students.allAsleep) {
         this.bus.emit('CLASSROOM_CLEARED', {});
         this.end('cleared');
       }
@@ -316,7 +423,17 @@ export class ClassroomSimulation {
       reach: STUDENT_TIMINGS.startleReachPerIntensity * (1 + outcome.intensity),
       affected: this.byDistance(startled), asleep: [], trumpetIntensity: outcome.intensity, rewarded: false,
     }, this.flavorRng), 'trumpet');
-    if (!this.options.tutorial) this.strike('trumpet');
+    if (this.options.tutorial) return;
+    if (caught) this.catchRedHanded('trumpet');
+    else if (this.rules.detection === 'strikes') this.strike('trumpet');
+    // Pillada inmediata con el profe de espaldas: sin aviso, pero el ruido le hace girarse.
+    else this.professor.investigate(PLAYER_TARGET);
+  }
+
+  private catchRedHanded(kind: 'silent' | 'trumpet'): void {
+    this.bus.emit('CAUGHT_RED_HANDED', { kind });
+    this.professor.investigate(PLAYER_TARGET);
+    this.end('caught');
   }
 
   private strike(reason: 'trumpet' | 'seen'): void {

@@ -37,4 +37,6 @@ export interface ClassroomView {
   highContrast: boolean;
   /** Los indicadores aún no se muestran (intro del tutorial). */
   showLevels: boolean;
+  /** Solo en misiones de campaña: caídas, objetivo actual, aviso de la silla y tiempo jugado. */
+  campaign: { falls: number; maxFalls: number; professorTarget: boolean; tilt: number; elapsed: number } | null;
 }

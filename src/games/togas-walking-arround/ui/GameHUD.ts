@@ -3,11 +3,15 @@ import { ART_SCALE, headTex } from '../art/textures';
 import { EMISSION_TIERS, getTierPresentation } from '../config/emission.config';
 import { GAME_CONFIG } from '../config/game.config';
 import type { TogasRuntime } from '../runtime';
-import type { HudState } from '../scenes/PlayScene';
+import { formatMultiplier, type HudState } from '../scenes/PlayScene';
 import { COLORS, addText } from './theme';
 import { drawPanel } from '../../../core/ui/phaser/widgets';
 
 const METER = { x: 618, y: 24, width: 230, height: 26 };
+/** Nombre de cada nivel de búsqueda policial (índice = estrellas). */
+const WANTED_LABELS = ['Inocente', 'Sospechoso', 'Alborotador', 'Molestia pública', 'Lo más buscado', '¡Detenido!'] as const;
+const PROGRESS = { width: 220, height: 22 } as const;
+
 const GAS_STOPS: ReadonlyArray<readonly [number, number]> = [
   [0, 0x8bd450],
   [0.55, 0xffd23f],
@@ -31,6 +35,14 @@ export class GameHUD extends Phaser.Scene {
   private lastScore = -1;
   private lastSeconds = -1;
   private lastTier = -1;
+  private progressFill: Phaser.GameObjects.Graphics | null = null;
+  private progressText: Phaser.GameObjects.Text | null = null;
+  private multiplierText: Phaser.GameObjects.Text | null = null;
+  private starsText: Phaser.GameObjects.Text | null = null;
+  private wantedText: Phaser.GameObjects.Text | null = null;
+  private lastProgress = -1;
+  private lastMultiplier = -1;
+  private lastWanted = -1;
   private unsubscribers: Array<() => void> = [];
 
   constructor(private readonly rt: TogasRuntime) {
@@ -41,6 +53,8 @@ export class GameHUD extends Phaser.Scene {
     this.state = data.state;
     this.displayedGas = 0;
     this.lastScore = this.lastSeconds = this.lastTier = -1;
+    this.lastProgress = this.lastMultiplier = this.lastWanted = -1;
+    this.progressFill = this.progressText = this.multiplierText = this.starsText = this.wantedText = null;
 
     // Avatar y puntos.
     const avatarBg = this.add.graphics();
@@ -51,10 +65,22 @@ export class GameHUD extends Phaser.Scene {
     addText(this, 86, 24, 'PUNTOS', 14, { align: 'left', stroke: 4 });
     this.scoreText = addText(this, 86, 50, '0', 30, { align: 'left', color: COLORS.yellowCss });
 
-    // Tiempo.
-    const pill = this.add.graphics({ x: GAME_CONFIG.view.width / 2, y: 38 });
-    drawPanel(pill, 128, 50, { radius: 25, shadow: 4 });
-    this.timerText = addText(this, GAME_CONFIG.view.width / 2, 38, '1:30', 30, { color: COLORS.inkCss, stroke: 0 });
+    // Tiempo (o, en la campaña, distancia a la meta y búsqueda policial).
+    const cx = GAME_CONFIG.view.width / 2;
+    if (this.state.street) {
+      const pill = this.add.graphics({ x: cx, y: 32 });
+      drawPanel(pill, PROGRESS.width + 20, 40, { radius: 20, shadow: 4 });
+      this.progressFill = this.add.graphics();
+      this.progressText = addText(this, cx, 32, '', 15, { color: COLORS.inkCss, stroke: 0 });
+      this.timerText = addText(this, cx, -100, '', 10).setVisible(false);
+      this.starsText = addText(this, cx, 72, '', 26, { stroke: 4 });
+      this.wantedText = addText(this, cx, 96, '', 13, { stroke: 3 });
+      this.multiplierText = addText(this, 86, 78, '', 18, { align: 'left', color: '#b5e36b', stroke: 4 });
+    } else {
+      const pill = this.add.graphics({ x: cx, y: 38 });
+      drawPanel(pill, 128, 50, { radius: 25, shadow: 4 });
+      this.timerText = addText(this, cx, 38, '1:30', 30, { color: COLORS.inkCss, stroke: 0 });
+    }
 
     // Medidor de gas e intensidad.
     const frame = this.add.graphics();
@@ -85,8 +111,10 @@ export class GameHUD extends Phaser.Scene {
       this.scoreText.setText(s.score.toLocaleString('es-ES'));
     }
 
+    if (s.street) this.updateStreet(s.street);
+
     const seconds = Math.ceil(s.timeLeft);
-    if (seconds !== this.lastSeconds) {
+    if (!s.street && seconds !== this.lastSeconds) {
       this.lastSeconds = seconds;
       this.timerText.setText(`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
       const urgent = seconds <= 10 && seconds > 0;
@@ -106,6 +134,36 @@ export class GameHUD extends Phaser.Scene {
       const p = s.tier > 0 ? getTierPresentation(s.tier) : null;
       this.tierText.setText(p ? `Nivel ${p.tier} · ${p.label}` : 'Sin emisiones');
       this.tierText.setColor(p ? p.color : '#ffffff');
+    }
+  }
+
+  private updateStreet(street: NonNullable<HudState['street']>): void {
+    const progress = Math.round(street.progress * 100);
+    if (progress !== this.lastProgress && this.progressFill && this.progressText) {
+      this.lastProgress = progress;
+      const g = this.progressFill;
+      const x = GAME_CONFIG.view.width / 2 - PROGRESS.width / 2;
+      const y = 32 - PROGRESS.height / 2;
+      g.clear();
+      g.fillStyle(0xe8dcc4, 1).fillRoundedRect(x, y, PROGRESS.width, PROGRESS.height, 11);
+      const w = Math.max(PROGRESS.height, PROGRESS.width * street.progress);
+      g.fillStyle(0x8bd450, 1).fillRoundedRect(x, y, w, PROGRESS.height, 11);
+      this.progressText.setText(`🏛 Universidad · ${progress} %`);
+    }
+    if (street.multiplier !== this.lastMultiplier && this.multiplierText) {
+      const grew = street.multiplier > this.lastMultiplier && this.lastMultiplier > 0;
+      this.lastMultiplier = street.multiplier;
+      this.multiplierText.setText(`Multiplicador ×${formatMultiplier(street.multiplier)}`);
+      this.multiplierText.setColor(street.multiplier > 1 ? '#b5e36b' : '#ffffff');
+      if (grew) this.tweens.add({ targets: this.multiplierText, scale: { from: 1.3, to: 1 }, duration: 260, ease: 'Back.easeOut' });
+    }
+    if (street.wanted !== this.lastWanted && this.starsText && this.wantedText) {
+      const rose = street.wanted > this.lastWanted && this.lastWanted >= 0;
+      this.lastWanted = street.wanted;
+      this.starsText.setText('★'.repeat(street.wanted) + '☆'.repeat(Math.max(0, street.maxWanted - street.wanted)));
+      this.starsText.setColor(street.wanted === 0 ? '#c9c2e6' : street.wanted >= street.maxWanted - 1 ? '#ff4d6d' : '#ffd23f');
+      this.wantedText.setText(`🚓 ${WANTED_LABELS[Math.min(street.wanted, WANTED_LABELS.length - 1)]}`);
+      if (rose) this.tweens.add({ targets: [this.starsText, this.wantedText], scale: { from: 1.5, to: 1 }, duration: 380, ease: 'Back.easeOut' });
     }
   }
 

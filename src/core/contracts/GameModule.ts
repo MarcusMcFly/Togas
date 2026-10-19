@@ -16,6 +16,8 @@ export interface GameModule {
   /** URL de la miniatura del hub (normalmente un data URI). */
   readonly thumbnail: string;
   readonly supportedInputs: readonly InputKind[];
+  /** Etiqueta destacada en el hub (p. ej. "Campaña"): la tarjeta recibe un trato especial. */
+  readonly badge?: string;
   /** Carga lo que el juego necesita antes de crear una sesión. */
   preload(): Promise<void>;
   /** Crea una sesión de juego. El shell llamará a `start()` justo después. */

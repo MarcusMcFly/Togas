@@ -1,9 +1,11 @@
 import type { GameContext } from '../../core/contracts/GameContext';
+import type { MissionHost } from '../../core/contracts/Mission';
 import { DEFAULT_SKIN_ID, getSkin, type SkinDefinition } from '../../core/characters/CharacterRegistry';
 import type { CreditTransferRecord } from '../../core/progression/CreditTransfer';
 import type { SoundRecipe } from '../../core/services/AudioManager';
 import { GAME_CONFIG } from './config/game.config';
 import { getPerk, type PerkDefinition, type PerkId } from './config/perks.config';
+import type { ClassroomRules } from './config/ruleset';
 import type { ClassroomResults } from './systems/ClassroomSimulation';
 
 export interface CampusRunInfo {
@@ -27,6 +29,49 @@ export interface Preferences {
   highContrast: boolean;
 }
 
+/** Estadísticas de una clase jugada como misión (las lee el orquestador). */
+export interface ClassroomMissionStats {
+  studentsAffected: number;
+  totalStudents: number;
+  silentEmissions: number;
+  trumpetFarts: number;
+  chairFalls: number;
+  /** Presión más alta alcanzada (0–100). */
+  peakPressure: number;
+  /** Precisión media del equilibrio (0–1). */
+  accuracy: number;
+  longestHoldSec: number;
+  /** `caught` si el profe te pilló soltando. */
+  detection: 'none' | 'caught';
+  aristocratDefeated: boolean;
+  durationSec: number;
+}
+
+/** Puntos de campaña que se pierden (nunca se ganan) durante la misión. */
+export interface ClassroomPenalties {
+  chairFall: number;
+  /** Trompetazo con el profe de espaldas (o emisión forzada por presión). */
+  uncontrolledRelease: number;
+  /** Goteo por segundo de clase activa: acabar antes conserva más puntos. */
+  drainPerSec: number;
+}
+
+/** Textos propios de la misión (historia breve dentro del aula). */
+export interface ClassroomMissionTexts {
+  intro: string;
+  objective: string;
+  professorTarget: string;
+  victory: string;
+}
+
+/** Una clase jugada como misión: anfitrión, reglamento, penalizaciones y textos. */
+export interface ClassroomMission {
+  host: MissionHost<ClassroomMissionStats>;
+  rules: ClassroomRules;
+  penalties: ClassroomPenalties;
+  texts: ClassroomMissionTexts;
+}
+
 const KEYS = { skin: 'selectedSkin', best: 'bestScore', tutorial: 'tutorialDone', prefs: 'preferences' } as const;
 
 /**
@@ -43,11 +88,19 @@ export class SilentClassRuntime {
   private prefs: Preferences;
   private readonly pauseListeners = new Set<() => void>();
 
-  constructor(readonly context: GameContext) {
+  constructor(
+    readonly context: GameContext,
+    readonly mission: ClassroomMission | null = null,
+  ) {
     const storage = context.services.storage;
     this.skinId = getSkin(storage.get(KEYS.skin, DEFAULT_SKIN_ID)).id;
     const saved = storage.get<Partial<Preferences>>(KEYS.prefs, {});
     this.prefs = { forgiving: Boolean(saved.forgiving), highContrast: Boolean(saved.highContrast) };
+    if (mission) {
+      // En una misión el personaje lo impone el orquestador.
+      this.skinId = getSkin(mission.host.context.skinId).id;
+      return;
+    }
     // Si venimos de Walking Around, la skin de allí manda.
     const pending = this.pendingTransfer;
     if (pending) this.skinId = getSkin(pending.skinId).id;
@@ -85,6 +138,8 @@ export class SilentClassRuntime {
 
   /** Transferencia de Walking Around esperando a ser usada (sin gastarla). */
   get pendingTransfer(): CreditTransferRecord | null {
+    // Las misiones no participan en la Campus Run.
+    if (this.mission) return null;
     return this.context.services.campusRun.peekTransfer(GAME_CONFIG.id);
   }
 
@@ -97,6 +152,10 @@ export class SilentClassRuntime {
    * junto con la ventaja elegida; los créditos sobrantes caducan.
    */
   beginClass(): void {
+    if (this.mission) {
+      this.perk = null;
+      return;
+    }
     const record = this.context.services.campusRun.consumeTransfer(GAME_CONFIG.id);
     if (!record) {
       // Sin créditos no hay ventajas.

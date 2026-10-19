@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { GameContext } from '../../core/contracts/GameContext';
 import type { GameSession } from '../../core/contracts/GameSession';
 import { GAME_CONFIG } from './config/game.config';
-import { SilentClassRuntime } from './runtime';
+import { SilentClassRuntime, type ClassroomMission } from './runtime';
 import { BootScene } from './scenes/BootScene';
 import { ClassroomHUD } from './scenes/ClassroomHUD';
 import { ClassroomScene } from './scenes/ClassroomScene';
@@ -17,8 +17,11 @@ export class SilentClassSession implements GameSession {
   private game: Phaser.Game | null = null;
   private readonly runtime: SilentClassRuntime;
 
-  constructor(private readonly context: GameContext) {
-    this.runtime = new SilentClassRuntime(context);
+  constructor(
+    private readonly context: GameContext,
+    mission: ClassroomMission | null = null,
+  ) {
+    this.runtime = new SilentClassRuntime(context, mission);
   }
 
   start(): void {
@@ -36,7 +39,7 @@ export class SilentClassSession implements GameSession {
       render: { antialias: true, roundPixels: false },
       // Solo un puntero: los segundos dedos no existen para el juego.
       input: { activePointers: 1 },
-      scene: [new BootScene(), new SelectScene(rt), new ClassroomScene(rt), new ClassroomHUD(), new ResultsScene(rt)],
+      scene: [new BootScene(rt), new SelectScene(rt), new ClassroomScene(rt), new ClassroomHUD(), new ResultsScene(rt)],
     });
   }
 

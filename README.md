@@ -110,6 +110,25 @@ Lo que **está prohibido** y por qué:
 
 ---
 
+### Modo campaña (`src/campaign/`, spec [`SPEC_05_Campaign.docx`](docs/SPEC_05_Campaign.docx))
+
+Tercera entrada del hub. **Es un orquestador, no una copia de los juegos**: enseña la historia, el plantel de 8 huecos (solo Pollo desbloqueado) y el mapa del capítulo, y para cada misión monta el minijuego existente con un *reglamento* de campaña.
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| Contrato de misión | `core/contracts/Mission.ts` | `MissionContext`, eventos de campaña y `MissionHost` (el juego informa; la campaña decide) |
+| Reglamentos | `games/*/config/ruleset.ts` | `STANDALONE_*` = reglas originales; la campaña pasa los suyos desde `campaign/chapters/pollo/level-*/` |
+| Entrada de misión | `games/*/mission.ts` | `createWalkingMission` / `createClassroomMission`: mismo motor, sin selección ni resultados propios |
+| Puntuación única | `campaign/systems/CampaignScoreSystem.ts` | Rechaza ganancias en 1-2, nunca baja de 0, avisa al llegar a 0 |
+| Progreso y guardado | `campaign/CampaignManager.ts`, `core/progression/CampaignSave.ts` | Orden de misiones, reintentos, intento perdido, interrupciones; `localStorage` validado |
+| Desbloqueos | `core/progression/UnlockManager.ts`, `campaign/config/progression.config.ts` | Condiciones como datos (aún sin umbrales, la spec no los fija) |
+
+Capítulo 1 — *La misión de Pollo*: **1-1** El trayecto de las lentejas (Walking Around: lentejas ×3, pedos automáticos, testigos y 5 estrellas de policía, tocar = saltar / deslizar abajo = rodar, meta en la universidad), **1-2** Clase silenciosa (Silent Class: sin ganar puntos, caídas de la silla, pillada inmediata, 12 compañeros y luego el profe-aristócrata) y **1-3** Vuelta a la base, **reservada sin implementar**.
+
+Los juegos nunca importan nada de `campaign/` (lo comprueba `tests/integration/architecture.test.ts`), y jugar la campaña no toca récords ni preferencias del modo normal: cada misión recibe su propio almacenamiento.
+
+---
+
 ## 3. Estructura del proyecto
 
 ```

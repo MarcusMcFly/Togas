@@ -28,8 +28,12 @@ export const GAME_CONFIG = {
     coyoteTimeSec: 0.08,
     /** Una pulsación poco antes de aterrizar se recuerda y salta al tocar suelo. */
     jumpBufferSec: 0.12,
+    /** Solo en los modos con "deslizar para rodar". */
+    roll: { durationSec: 0.75, fastFallVelocity: 1100 },
   } satisfies RunnerParams,
   /** Caja de colisión común a TODAS las skins: así ninguna tiene ventaja (AC-02). */
   playerHitbox: { width: 44, height: 100 },
+  /** Altura de la caja mientras rueda (pasa por debajo de los obstáculos de 58 px). */
+  rollHitboxHeight: 46,
   gas: { max: 100, maxTier: 5 },
 } as const;

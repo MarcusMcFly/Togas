@@ -52,7 +52,11 @@ const POSES: Record<ProfessorFrame, Pose> = {
   angry: { view: 'front', arm: 'point', bend: 0, face: 'angry', peek: false },
 };
 
-export function drawProfessor(ctx: Ctx, frame: ProfessorFrame): void {
+/**
+ * @param aristocrat detalles sutiles de aristócrata disfrazado (campaña): bigote
+ *   con las puntas rizadas, clavel en la solapa y cadena de reloj de oro.
+ */
+export function drawProfessor(ctx: Ctx, frame: ProfessorFrame, aristocrat = false): void {
   const p = POSES[frame];
   const { feetX, feetY } = PROFESSOR_CANVAS;
   ctx.save();
@@ -76,8 +80,48 @@ export function drawProfessor(ctx: Ctx, frame: ProfessorFrame): void {
     ctx.scale(1, 1 - 0.35 * p.bend);
   }
   drawUpperBody(ctx, p);
+  if (aristocrat) drawAristocratDetails(ctx, p);
   ctx.restore();
   ctx.restore();
+}
+
+function drawAristocratDetails(ctx: Ctx, p: Pose): void {
+  const top = -78;
+  const hy = top - 22;
+  if (p.view === 'front') {
+    // Cadena de reloj de oro sobre el chaleco.
+    ctx.strokeStyle = '#d4a017';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(-14, top + 40);
+    ctx.quadraticCurveTo(-2, top + 50, 12, top + 40);
+    ctx.stroke();
+    circlePath(ctx, 12, top + 40, 2.6);
+    fillStroke(ctx, '#ffd23f', 1.2);
+    // Clavel rojo en la solapa.
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      circlePath(ctx, -17 + Math.cos(a) * 2.6, top + 14 + Math.sin(a) * 2.6, 2.4);
+      fillStroke(ctx, '#d62839', 1);
+    }
+    circlePath(ctx, -17, top + 14, 1.6);
+    ctx.fillStyle = '#ff8fa3';
+    ctx.fill();
+  }
+  if (p.view === 'back') return;
+  // Puntas del bigote rizadas hacia arriba.
+  ctx.strokeStyle = LOOK.hair;
+  ctx.lineWidth = 2.4;
+  const sides = p.view === 'side' ? [1] : [-1, 1];
+  const cx = p.view === 'side' ? 12 : 0;
+  for (const side of sides) {
+    const x = cx + side * 10;
+    ctx.beginPath();
+    ctx.moveTo(x - side * 2, hy + 10);
+    ctx.quadraticCurveTo(x + side * 5, hy + 10, x + side * 5, hy + 5);
+    ctx.quadraticCurveTo(x + side * 5, hy + 2, x + side * 2, hy + 4);
+    ctx.stroke();
+  }
 }
 
 function drawUpperBody(ctx: Ctx, p: Pose): void {

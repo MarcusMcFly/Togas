@@ -26,6 +26,8 @@ export class Professor {
   private bubbleTimer: Phaser.Time.TimerEvent | null = null;
   private lastStroke = -1;
   private state: ProfessorStateId = 'writing';
+  /** Derrotado (campaña): ya no cambia de fotograma ni de estado. */
+  private defeated = false;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.sprite = scene.add.image(HOME.x, HOME.y, professorTex('write0'))
@@ -52,6 +54,7 @@ export class Professor {
   }
 
   setState(state: ProfessorStateId, targetX: number | null): void {
+    if (this.defeated) return;
     this.state = state;
     this.scene.tweens.killTweensOf(this.icon);
     const icon = state === 'warning' ? '!' : state === 'watching' ? '?' : state === 'investigating' ? '!!' : '';
@@ -70,6 +73,7 @@ export class Professor {
   }
 
   update(time: number): ProfessorTick {
+    if (this.defeated) return { chalkStroke: false };
     const frame = this.frameFor(time);
     this.sprite.setTexture(professorTex(frame));
     this.icon.x = this.sprite.x;
@@ -109,6 +113,27 @@ export class Professor {
   /** Se le cae la tiza del susto. */
   flinch(): void {
     this.scene.tweens.add({ targets: this.sprite, y: HOME.y - 10, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
+  }
+
+  /** La nube final le alcanza: se tambalea y se desploma sobre la mesa (dibujos animados). */
+  collapse(reducedMotion: boolean): void {
+    this.defeated = true;
+    this.hideBubble();
+    this.scene.tweens.killTweensOf([this.sprite, this.icon]);
+    this.sprite.setTexture(professorTex('angry')).setFlipX(false);
+    this.icon.setText('😵').setColor('#ffffff').setAlpha(1).setScale(1).setY(ICON_Y);
+    const tweens = this.scene.tweens;
+    if (reducedMotion) {
+      tweens.add({ targets: this.sprite, angle: 70, y: HOME.y + 40, duration: 600, ease: 'Quad.easeIn' });
+      return;
+    }
+    tweens.add({
+      targets: this.sprite, angle: { from: -8, to: 8 }, duration: 120, yoyo: true, repeat: 3,
+      onComplete: () => {
+        tweens.add({ targets: this.sprite, angle: 78, y: HOME.y + 46, x: this.sprite.x + 20, duration: 520, ease: 'Bounce.easeOut' });
+        tweens.add({ targets: this.icon, y: ICON_Y + 90, x: this.sprite.x + 70, duration: 520, ease: 'Bounce.easeOut' });
+      },
+    });
   }
 
   private frameFor(time: number): ProfessorFrame {

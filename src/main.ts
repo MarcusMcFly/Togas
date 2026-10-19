@@ -6,6 +6,7 @@ import { CampusRunManager } from './core/services/CampusRunManager';
 import { InputManager } from './core/services/InputManager';
 import { SaveManager } from './core/services/SaveManager';
 import { SettingsManager } from './core/services/SettingsManager';
+import { togasCampaign } from './campaign/CampaignModule';
 import { templateGame } from './games/_template';
 import { togasSilentClass } from './games/togas-silent-class';
 import { togasWalkingArround } from './games/togas-walking-arround';
@@ -22,6 +23,8 @@ const campusRun = new CampusRunManager({ sequence: [togasWalkingArround.id, toga
 const registry = new GameRegistry();
 registry.register(togasWalkingArround);
 registry.register(togasSilentClass);
+// Tercera entrada: el modo campaña, que orquesta los dos juegos anteriores.
+registry.register(togasCampaign);
 // La plantilla solo aparece en desarrollo, para demostrar que se puede añadir un juego sin tocar los demás.
 if (import.meta.env.DEV) registry.register(templateGame);
 

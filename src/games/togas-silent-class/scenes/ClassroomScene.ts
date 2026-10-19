@@ -21,8 +21,10 @@ import { SeatedPlayer } from '../entities/SeatedPlayer';
 import { Student } from '../entities/Student';
 import { ClassroomFx } from '../fx/ClassroomFx';
 import { BalanceTouchController } from '../input/BalanceTouchController';
-import type { SilentClassRuntime } from '../runtime';
+import type { ClassroomMissionStats, SilentClassRuntime } from '../runtime';
 import { ClassroomSimulation, PLAYER_TARGET, type ReleaseResult } from '../systems/ClassroomSimulation';
+import type { EndReason } from '../systems/events';
+import { MissionScoreBridge, type LossReason } from '../systems/MissionScoreBridge';
 import type { ClassroomView } from '../ui/view';
 import type { ClassroomHUD, TutorialCard } from './ClassroomHUD';
 
@@ -84,6 +86,9 @@ export class ClassroomScene extends Phaser.Scene {
   private soundVariant = 0;
   private tutorialStep: TutorialStep = 'done';
   private slowFrames = 0;
+  /** Solo en misiones: traduce el aula a puntos de campaña (siempre pérdidas). */
+  private bridge: MissionScoreBridge | null = null;
+  private finished = false;
 
   constructor(private readonly rt: SilentClassRuntime) {
     super('classroom');
@@ -98,8 +103,10 @@ export class ClassroomScene extends Phaser.Scene {
     this.lastStudentId = null;
     this.timers = { tick: 0, heartbeat: 0, mumble: 1500, strain: 0, lecture: 2000 };
     this.slowFrames = 0;
+    this.finished = false;
     const skin = this.rt.skin;
     const tutorial = this.mode === 'tutorial';
+    const mission = this.rt.mission;
     // La transferencia de Campus Run (si la hay) se gasta al empezar la clase de verdad.
     if (!tutorial) this.rt.beginClass();
 
@@ -108,7 +115,11 @@ export class ClassroomScene extends Phaser.Scene {
       perk: tutorial ? null : this.rt.perk,
       forgiving: this.rt.preferences.forgiving,
       tutorial,
+      rules: mission?.rules,
     });
+    this.bridge = mission && !tutorial
+      ? new MissionScoreBridge(this.sim, mission.host, mission.penalties, (points, reason) => this.showLoss(points, reason))
+      : null;
 
     ensurePlayerTextures(this, skin);
     this.classroom = new Classroom(this);
@@ -129,7 +140,15 @@ export class ClassroomScene extends Phaser.Scene {
       attention: 'away', attentionProgress: 0, attentionEmphasis: this.rt.perk === 'professorNotes' && !tutorial,
       silence: false, joystick: { active: false, originX: 0, originY: 0, thumbX: 0, thumbY: 0 },
       highContrast: this.rt.preferences.highContrast, showLevels: !tutorial,
+      campaign: mission?.rules.chair
+        ? { falls: 0, maxFalls: mission.rules.chair.maxFalls, professorTarget: false, tilt: 0, elapsed: 0 }
+        : null,
     };
+    if (this.view.campaign) {
+      // En la campaña los "avisos" del HUD son las caídas de la silla.
+      this.view.maxStrikes = this.view.campaign.maxFalls;
+      this.view.strikesLeft = this.view.campaign.maxFalls;
+    }
     this.scene.launch('hud', { view: this.view });
     this.hud = this.scene.get('hud') as ClassroomHUD;
 
@@ -148,7 +167,10 @@ export class ClassroomScene extends Phaser.Scene {
   update(time: number, deltaMs: number): void {
     const dt = Math.min(deltaMs / 1000, 1 / 20);
     this.monitorPerformance(deltaMs);
-    if (this.phase === 'playing') this.sim.update(dt);
+    if (this.phase === 'playing') {
+      this.sim.update(dt);
+      this.bridge?.update(dt);
+    }
     this.syncVisuals(time);
     this.ambientAudio(deltaMs);
     this.updateTutorial();
@@ -298,13 +320,13 @@ export class ClassroomScene extends Phaser.Scene {
         student.react(e.anim, e.intensity, this.rt.reducedMotion);
         if (silent && e.intensity >= 0.5) this.fx.faceHit(head, color, e.intensity);
         if (order >= REACTION_CONFIG.maxMessages) return;
-        const text = e.bonus > 0 ? `${e.message} +${e.bonus}` : e.message;
+        const text = e.bonus > 0 && !this.rt.mission ? `${e.message} +${e.bonus}` : e.message;
         this.fx.comicText(text, head.x, head.y - 44 * student.seat.scale, e.color, e.intensity, this.rt.reducedMotion);
       });
     });
 
     on('CLASS_REACTION', (e) => {
-      const text = e.bonus > 0 ? `${e.message} +${e.bonus}` : e.message;
+      const text = e.bonus > 0 && !this.rt.mission ? `${e.message} +${e.bonus}` : e.message;
       if (e.id === 'silentApocalypse') this.fx.silentCloud(this.player.rear, 720, this.cloudColor, this.rt.reducedMotion);
       this.time.delayedCall(e.kind === 'silent' ? 750 : 450, () => {
         this.fx.comicText(text, GAME_CONFIG.view.width / 2, 210, e.color, 1, this.rt.reducedMotion, 26);
@@ -324,6 +346,8 @@ export class ClassroomScene extends Phaser.Scene {
       this.time.delayedCall(350, () => this.rt.play(gaspSound));
       this.time.delayedCall(900, () => this.rt.play(embarrassedSound(this.rt.skin, this.nextVariant()), 'voice'));
       if (this.mode === 'tutorial') return;
+      // Pillada en una misión: el final ya tiene sus propios carteles.
+      if (this.rt.mission && this.sim.professorLooking) return;
       const title = e.duringSilence ? `${variant.label.toUpperCase()}…\n¡EN PLENO SILENCIO!` : `¡${variant.label.toUpperCase()}!`;
       this.hud.banner(title, '#ff8a3d', 46, 800);
       if (e.intensity >= 4 || e.duringSilence) {
@@ -349,7 +373,8 @@ export class ClassroomScene extends Phaser.Scene {
 
     on('SCORE_AWARDED', ({ points, reason }) => {
       // Las reacciones ya enseñan su bonus en su propio texto de cómic.
-      if (points === 0 || reason === 'reaction') return;
+      // En una misión estos puntos no existen: solo cuentan los de campaña.
+      if (points === 0 || reason === 'reaction' || this.rt.mission) return;
       const text = points > 0 ? `+${points}` : `${points}`;
       const color = points > 0 ? '#ffd23f' : '#ff8fa3';
       if (reason === 'student' && this.lastStudentId) {
@@ -370,7 +395,61 @@ export class ClassroomScene extends Phaser.Scene {
       this.hud.banner('100% DE ASISTENCIA.\n0% DE CONSCIENCIA.', '#b9a7ff', 40, 1600);
     });
 
+    this.bindMissionEvents(on);
     on('SESSION_ENDED', ({ reason }) => this.endSession(reason));
+  }
+
+  /** Reglas de campaña: silla, pillada inmediata, profe como objetivo final. */
+  private bindMissionEvents(on: ClassroomSimulation['bus']['on']): void {
+    const mission = this.rt.mission;
+    if (!mission) return;
+
+    on('CHAIR_WOBBLE', () => {
+      this.hud.toast('⚠ ¡LA SILLA SE TAMBALEA! ¡CENTRA LAS BURBUJAS!', '#ff9f1c', 1100);
+      this.rt.play(warningBlip);
+    });
+
+    on('CHAIR_FALL', ({ fallCount, maxFalls }) => {
+      this.rt.play(slamSound);
+      this.time.delayedCall(250, () => this.rt.play(gaspSound));
+      this.player.showPose('shame', null, 1400);
+      this.player.launch(16, true, this.rt.reducedMotion);
+      this.setExpression('shock', 700);
+      this.time.delayedCall(700, () => this.setExpression('embarrassed', 1400));
+      this.professor.flinch();
+      if (fallCount >= maxFalls) return;
+      const line = fallCount === maxFalls - 1 ? '¡Le estoy vigilando! ¡A la próxima, fuera!' : pick(PROFESSOR_DIALOGUE.suspicious);
+      this.time.delayedCall(450, () => this.professor.say(line, 2200, fallCount === maxFalls - 1 ? 'shout' : 'lecture'));
+      this.hud.banner(`¡AL SUELO!\nCAÍDA ${fallCount} DE ${maxFalls}`, '#ff9f1c', 44, 800);
+      this.time.delayedCall(1300, () => this.hud.toast('Se ha escapado todo el gas. Vuelve a apretar.', '#ffffff', 1600));
+    });
+
+    on('CAUGHT_RED_HANDED', () => {
+      this.time.delayedCall(250, () => this.professor.say(pick(PROFESSOR_DIALOGUE.caught), 2400, 'shout'));
+    });
+
+    on('PROFESSOR_TARGETED', () => {
+      this.rt.play(fanfareSound);
+      this.time.delayedCall(900, () => {
+        this.hud.banner(mission.texts.professorTarget, '#b9a7ff', 40, 1400);
+        this.professor.say('¿Qué les pasa a todos? Sigamos con la oferta y la demanda…', 2600);
+      });
+    });
+
+    on('ARISTOCRAT_DEFEATED', () => {
+      this.time.delayedCall(Math.max(250, (300 / REACTION_CONFIG.cloudSpeed) * 1000), () => {
+        this.fx.wisp(this.player.rear, { x: this.professor.headX, y: this.professor.headY }, this.cloudColor);
+        this.professor.collapse(this.rt.reducedMotion);
+        this.rt.play(slamSound);
+      });
+    });
+  }
+
+  /** Pérdida de puntos de campaña, sobre la cabeza del protagonista. */
+  private showLoss(points: number, reason: LossReason): void {
+    if (reason === 'time') return; // El goteo se ve en el marcador; no hace falta un texto por segundo.
+    const head = this.player.head;
+    this.time.delayedCall(reason === 'chairFall' ? 500 : 300, () => this.fx.floatingText(`${points}`, head.x, head.y - 30, '#ff8fa3', 24));
   }
 
   // ——— Ritmo de la partida ———
@@ -390,7 +469,10 @@ export class ClassroomScene extends Phaser.Scene {
       return;
     }
 
-    const caption = this.rt.campusRun ? '«Todas esas fabes eran una inversión.»' : '¿Quizá tantas fabes no fueron buena idea…?';
+    const mission = this.rt.mission;
+    const caption = mission
+      ? mission.texts.intro
+      : this.rt.campusRun ? '«Todas esas fabes eran una inversión.»' : '¿Quizá tantas fabes no fueron buena idea…?';
     this.hud.toast(caption, '#ffd23f', 1600);
     const steps = GAME_CONFIG.session.countdownSteps;
     for (let i = 0; i <= steps; i++) {
@@ -404,18 +486,23 @@ export class ClassroomScene extends Phaser.Scene {
         this.rt.play(goBeep);
         // IMP-01: el arranque es tranquilo; se aprovecha para recordar el control.
         this.time.delayedCall(700, () => this.hud.toast('Mantén pulsado y arrastra: centra las dos burbujas', '#ffffff', 2200));
+        if (mission) this.time.delayedCall(3200, () => this.hud.toast(mission.texts.objective, '#b9a7ff', 2600));
         this.phase = 'playing';
         if (this.controller) this.controller.enabled = true;
       });
     }
   }
 
-  private endSession(reason: 'time' | 'expelled' | 'cleared'): void {
+  private endSession(reason: EndReason): void {
     if (this.phase === 'ending') return;
     this.phase = 'ending';
     this.controller?.cancel();
     if (this.controller) this.controller.enabled = false;
     this.rt.context.setPauseAvailable(false);
+    if (this.rt.mission) {
+      this.endMission(reason);
+      return;
+    }
     if (reason === 'time') {
       this.rt.play(bellSound);
       this.hud.banner('¡CLASE TERMINADA!', '#ffd23f', 64, 1200);
@@ -429,6 +516,63 @@ export class ClassroomScene extends Phaser.Scene {
       if (results.isNewBest || reason === 'cleared') this.rt.play(fanfareSound);
       this.scene.start('results');
     });
+  }
+
+  /** Final de una misión: animación propia y aviso al anfitrión (sin pantalla de resultados). */
+  private endMission(reason: EndReason): void {
+    const mission = this.rt.mission;
+    if (!mission) return;
+    const won = reason === 'defeated';
+    let delay = 2800;
+    switch (reason) {
+      case 'defeated':
+        this.rt.play(fanfareSound);
+        this.rt.play(victorySound(this.rt.skin), 'voice');
+        this.player.showPose('celebrate', 'relaxed', 4000);
+        this.setExpression('proud', 4000);
+        this.time.delayedCall(1300, () => this.hud.banner(mission.texts.victory, '#8bd450', 38, 2200));
+        delay = 4600;
+        break;
+      case 'caught':
+        this.setExpression('shock', 900);
+        this.time.delayedCall(900, () => this.setExpression('embarrassed', 2000));
+        this.hud.banner('¡TE HA PILLADO!', '#ff4d6d', 60, 900);
+        this.time.delayedCall(1300, () => this.hud.banner('¡FUERA DE MI CLASE!', '#ff4d6d', 46, 900));
+        break;
+      case 'fallen':
+        this.time.delayedCall(600, () => this.rt.play(slamSound));
+        this.time.delayedCall(800, () => this.hud.banner('TRES CAÍDAS.\nUNA EXPULSIÓN.', '#ff4d6d', 50, 1200));
+        break;
+      case 'bankrupt':
+        this.rt.play(bellSound);
+        this.hud.banner('¡TE HAS QUEDADO\nSIN PUNTOS!', '#ff4d6d', 50, 1200);
+        break;
+      default:
+        this.rt.play(bellSound);
+        this.hud.banner('¡CLASE TERMINADA!', '#ffd23f', 64, 1200);
+    }
+    this.time.delayedCall(delay, () => {
+      if (this.finished) return;
+      this.finished = true;
+      mission.host.finish({ status: won ? 'completed' : 'failed', reason: won ? undefined : reason, stats: this.missionStats(reason) });
+    });
+  }
+
+  private missionStats(reason: EndReason): ClassroomMissionStats {
+    const r = this.sim.results();
+    return {
+      studentsAffected: r.studentsKnockedOut,
+      totalStudents: r.totalStudents,
+      silentEmissions: r.silentFarts,
+      trumpetFarts: r.trumpetFarts,
+      chairFalls: r.chairFalls,
+      peakPressure: r.peakPressure,
+      accuracy: r.accuracy,
+      longestHoldSec: r.longestHoldSec,
+      detection: reason === 'caught' ? 'caught' : 'none',
+      aristocratDefeated: reason === 'defeated',
+      durationSec: Math.round(r.elapsedSec),
+    };
   }
 
   // ——— Dibujo ———
@@ -446,17 +590,26 @@ export class ClassroomScene extends Phaser.Scene {
     const { horizontal, vertical } = sim.balance.state;
     const pressureRatio = sim.pressure.ratio;
     const holding = sim.isHolding;
-    this.player.update({ horizontal, vertical, pressureRatio, holding, reducedMotion: this.rt.reducedMotion }, time);
+    const tilt = this.phase === 'playing' ? sim.chairTilt : 0;
+    this.player.update({ horizontal, vertical, pressureRatio, holding, reducedMotion: this.rt.reducedMotion, tilt }, time);
     this.classroom.setNightmare(sim.pressure.value >= PRESSURE_CONFIG.nightmareFrom && this.phase === 'playing');
-    this.classroom.updateClock(sim.elapsed / GAME_CONFIG.session.durationSec);
+    const limit = sim.rules.timeLimitSec;
+    // Sin límite de tiempo, el reloj de la pared da una vuelta cada 10 minutos.
+    this.classroom.updateClock(limit === null ? (sim.elapsed % 600) / 600 : sim.elapsed / limit);
 
     const v = this.view;
-    v.score = sim.score.score;
+    v.score = this.rt.mission?.host.score ?? sim.score.score;
     v.timeLeft = sim.timeLeft;
+    if (v.campaign) {
+      v.campaign.falls = sim.falls;
+      v.campaign.professorTarget = sim.professorIsTarget;
+      v.campaign.tilt = tilt;
+      v.campaign.elapsed = sim.elapsed;
+    }
     v.streak = sim.score.streak;
     v.multiplier = sim.score.multiplier;
     v.asleep = sim.students.asleepCount;
-    v.strikesLeft = sim.stealth.remaining;
+    v.strikesLeft = v.campaign ? v.campaign.maxFalls - sim.falls : sim.stealth.remaining;
     v.pressure = sim.pressure.value;
     v.horizontal = horizontal;
     v.vertical = vertical;
@@ -594,8 +747,11 @@ export class ClassroomScene extends Phaser.Scene {
     this.unsubscribers = [];
     this.controller?.dispose();
     this.controller = null;
+    this.bridge?.dispose();
+    this.bridge = null;
     this.sim.dispose();
     this.tutorialStep = 'done';
-    if (this.scene.isActive('hud')) this.scene.stop('hud');
+    // Al destruir el juego entero, el gestor de escenas ya no existe: no hay HUD que parar.
+    if (this.scene.manager && this.scene.isActive('hud')) this.scene.stop('hud');
   }
 }

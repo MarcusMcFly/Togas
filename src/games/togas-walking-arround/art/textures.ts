@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { COLLECTIBLES, OBSTACLES } from '../config/collectibles.config';
+import { ALL_COLLECTIBLES, OBSTACLES } from '../config/collectibles.config';
+import { TRAVERSAL_OBSTACLES } from '../config/traversal.config';
 import type { SkinDefinition } from '../../../core/characters/CharacterRegistry';
 import { CHARACTER_CANVAS, drawCharacter, drawCharacterHead } from './character';
 import {
@@ -7,11 +8,12 @@ import {
 } from './city';
 import { FX_CANVAS, drawBubble, drawGlow, drawPuff, drawRing, drawShadow, drawSpark } from './effects';
 import { ITEM_CANVAS, OBSTACLE_CANVAS, drawCollectible, drawObstacle } from './items';
+import { TRAVERSAL_CANVAS, UNIVERSITY_CANVAS, drawTraversal, drawUniversity } from './landmarks';
 import {
   ANGRY_POSE, FACE_CANVAS, FLEE_FRAMES, PERSON_CANVAS, SURPRISED_POSE, WALK_FRAMES,
   drawFaceBubble, drawPerson, fleePose, walkPose,
 } from './pedestrian';
-import { PEDESTRIAN_LOOKS } from '../config/pedestrians.config';
+import { PEDESTRIAN_LOOKS, POLICE_LOOKS } from '../config/pedestrians.config';
 import { IDLE_FRAMES, RUN_FRAMES, SINGLE_POSES, idlePose, runPose } from './poses';
 
 /**
@@ -32,11 +34,13 @@ export const TEX = {
   bubble: 'fx:bubble',
   glow: 'fx:glow',
   shadow: 'fx:shadow',
+  university: 'landmark:university',
 } as const;
 
 export const charTex = (skinId: string, pose: string): string => `char:${skinId}:${pose}`;
 export const headTex = (skinId: string): string => `head:${skinId}`;
 export const itemTex = (id: string): string => `item:${id}`;
+export const barrierTex = (id: string): string => `barrier:${id}`;
 export const pigeonTex = (frame: number): string => `pigeon:${frame}`;
 export const runAnim = (skinId: string): string => `anim:${skinId}:run`;
 export const idleAnim = (skinId: string): string => `anim:${skinId}:idle`;
@@ -47,6 +51,9 @@ export const pedFleeAnim = (lookId: string): string => `anim:ped:${lookId}:flee`
 export const PIGEON_FLY_ANIM = 'anim:pigeon:fly';
 export const PIGEON_PECK_ANIM = 'anim:pigeon:peck';
 export const HEAD_ICON_SIZE = 56;
+
+/** Viandantes y agentes: se dibujan igual. */
+const PEOPLE = [...PEDESTRIAN_LOOKS, ...POLICE_LOOKS];
 
 function paint(
   textures: Phaser.Textures.TextureManager,
@@ -84,16 +91,21 @@ export function generateTextures(scene: Phaser.Scene, skins: readonly SkinDefini
   paint(t, TEX.glow, FX_CANVAS.glow, FX_CANVAS.glow, drawGlow);
   paint(t, TEX.shadow, FX_CANVAS.shadow.width, FX_CANVAS.shadow.height, drawShadow);
 
-  for (const item of COLLECTIBLES) {
+  for (const item of ALL_COLLECTIBLES) {
     paint(t, itemTex(item.id), ITEM_CANVAS.width, ITEM_CANVAS.height, (ctx) => drawCollectible(ctx, item.id));
   }
   for (const obstacle of OBSTACLES) {
     paint(t, itemTex(obstacle.id), OBSTACLE_CANVAS.width, OBSTACLE_CANVAS.height, (ctx) => drawObstacle(ctx, obstacle.id));
   }
+  for (const barrier of TRAVERSAL_OBSTACLES) {
+    const c = TRAVERSAL_CANVAS[barrier.id];
+    paint(t, barrierTex(barrier.id), c.width, c.height, (ctx) => drawTraversal(ctx, barrier.id));
+  }
+  paint(t, TEX.university, UNIVERSITY_CANVAS.width, UNIVERSITY_CANVAS.height, drawUniversity);
   for (let frame = 0; frame < 4; frame++) paint(t, pigeonTex(frame), 40, 32, (ctx) => drawPigeon(ctx, frame));
 
   const P = PERSON_CANVAS;
-  for (const look of PEDESTRIAN_LOOKS) {
+  for (const look of PEOPLE) {
     for (let f = 0; f < WALK_FRAMES; f++) paint(t, pedTex(look.id, `walk${f}`), P.width, P.height, (ctx) => drawPerson(ctx, look, walkPose(f)));
     for (let f = 0; f < FLEE_FRAMES; f++) paint(t, pedTex(look.id, `flee${f}`), P.width, P.height, (ctx) => drawPerson(ctx, look, fleePose(f)));
     paint(t, pedTex(look.id, 'surprised'), P.width, P.height, (ctx) => drawPerson(ctx, look, SURPRISED_POSE));
@@ -134,7 +146,7 @@ export function createAnimations(scene: Phaser.Scene, skins: readonly SkinDefini
       });
     }
   }
-  for (const look of PEDESTRIAN_LOOKS) {
+  for (const look of PEOPLE) {
     if (!anims.exists(pedWalkAnim(look.id))) {
       anims.create({
         key: pedWalkAnim(look.id),

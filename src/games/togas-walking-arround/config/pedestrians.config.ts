@@ -35,6 +35,18 @@ export const PEDESTRIAN_LOOKS: readonly PedestrianLook[] = [
   },
 ];
 
+/** Agentes (ficticios) que se llevan detenido al protagonista en la campaña. */
+export const POLICE_LOOKS: readonly PedestrianLook[] = [
+  {
+    id: 'agente1', scale: 1.04, skinTone: '#e8b48a', hair: 'cap', hairColor: '#1d3557',
+    top: '#274c77', bottom: '#1d2d44', skirt: false, shoes: '#111111', glasses: false,
+  },
+  {
+    id: 'agente2', scale: 1.02, skinTone: '#c68642', hair: 'cap', hairColor: '#1d3557',
+    top: '#274c77', bottom: '#1d2d44', skirt: false, shoes: '#111111', glasses: true,
+  },
+];
+
 export const PEDESTRIAN_CONFIG = {
   /** Distancia de mundo entre apariciones [mín, máx]. */
   spawnEvery: [900, 2000] as const,
