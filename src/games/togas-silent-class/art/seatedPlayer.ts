@@ -149,7 +149,7 @@ function drawArms(ctx: Ctx, look: CharacterLook, pose: TorsoPose, shoulderY: num
   }
 }
 
-/** Cabeza vista por detrás: la calva de Poio o la coronilla clara de Marcus. */
+/** Cabeza vista por detrás: la calva de Pollo o la coronilla clara de Marcus. */
 function drawHeadBack(ctx: Ctx, look: CharacterLook, hx: number, hy: number): void {
   if (look.hair === 'quiff') {
     drawQuiffBack(ctx, look, hx, hy);

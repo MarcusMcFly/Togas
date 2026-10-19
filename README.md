@@ -37,7 +37,7 @@ Es un *runner* 2D de comedia. Un estudiante de ingeniería avanza solo por una c
 |---|---|
 | Duración | Partidas de **90 segundos** |
 | Control | **Una sola acción:** saltar. Tocar la pantalla, `Espacio`, `↑` o clic. Si mantienes pulsado, el salto es más alto |
-| Personajes (skins) | **Poio** (1,80 m, calvo) y **Marcus** (1,72 m, poco pelo). Cambian el aspecto y los sonidos, **nunca** la jugabilidad |
+| Personajes (skins) | **Pollo** (1,80 m, calvo) y **Marcus** (1,72 m, poco pelo). Cambian el aspecto y los sonidos, **nunca** la jugabilidad |
 | Coleccionables | Fabes, garbanzos, coliflor, lata de cerveza y refresco. Suben el **medidor de gas** y dan puntos |
 | Obstáculos | Aerored y sales de fruta. Bajan el gas, pero no te quitan puntos |
 | Viandantes | Pasean por la acera y reaccionan a los **pedos**: sorpresa o cabreo (con la cara ampliada en una viñeta de cómic) o salen corriendo. Cuanto más fuerte el pedo, más lejos llega y más huyen. Solo decorado; se ajusta en `config/pedestrians.config.ts` |
@@ -79,7 +79,7 @@ Lo que **está prohibido** y por qué:
 
 | ❌ Prohibido | Por qué |
 |---|---|
-| Que `core/` tenga lógica tipo `if (skin === "poio")` | Si el núcleo conoce un juego concreto, deja de servir para los demás |
+| Que `core/` tenga lógica tipo `if (skin === "pollo")` | Si el núcleo conoce un juego concreto, deja de servir para los demás |
 | Que un juego importe código de otro juego | Si borras o cambias uno, se rompería el otro |
 | Que `app/` conozca objetos del juego (fabes, eructos…) | El shell solo debe saber *que* hay juegos, no *cómo* funcionan |
 | Valores de balance escritos dentro de la lógica | Todo lo ajustable va en `config/` para poder equilibrar el juego sin tocar código |
@@ -104,7 +104,7 @@ Lo que **está prohibido** y por qué:
 | `entities/` | Objetos del mundo | `Player`, `Collectible`, `Obstacle` |
 | `systems/` | Reglas que se ejecutan cada frame | `GasSystem`, `SpawnSystem`, `ScoreSystem`… |
 | `ui/` | Interfaz propia del juego | `GameHUD`, `ResultsScreen` |
-| `assets/` | Imágenes y sonidos propios | Sprites de Poio, sonidos de Marcus |
+| `assets/` | Imágenes y sonidos propios | Sprites de Pollo, sonidos de Marcus |
 
 > 💡 Separar **entidades** (las *cosas*) de **sistemas** (las *reglas*) facilita los tests. Por ejemplo, `GasSystem` se puede probar con números sin dibujar nada en pantalla.
 
@@ -268,7 +268,7 @@ Todos los valores numéricos viven en `config/`. Valores iniciales de la spec:
 El audio se separa por skin, igual que los sprites:
 
 ```
-assets/audio/poio/poio_burp_t01_v01.ogg
+assets/audio/pollo/pollo_burp_t01_v01.ogg
               │     │    │   │
               │     │    │   └─ variante (v01, v02…) → para que no suene siempre igual
               │     │    └───── intensidad (t01 = Tiny … t05 = Legendary)
@@ -278,7 +278,7 @@ assets/audio/poio/poio_burp_t01_v01.ogg
 
 **Mínimo necesario:** 2 skins × 2 tipos × 5 intensidades = **20 clips**.
 
-El sistema de gas **nunca** referencia "poio" ni "marcus" directamente. Pide *"el eructo de nivel 3 de la skin activa"* y `audio/emissionSounds.ts` resuelve qué sonido toca.
+El sistema de gas **nunca** referencia "pollo" ni "marcus" directamente. Pide *"el eructo de nivel 3 de la skin activa"* y `audio/emissionSounds.ts` resuelve qué sonido toca.
 
 **Cómo se generan hoy (sin ficheros):** `audio/emissionSynth.ts` sintetiza cada sonido muestra a muestra imitando cómo se producen de verdad:
 
@@ -355,7 +355,7 @@ Tamaño actual de `dist/index.html`: **~1,3 MB** (~350 KB comprimido). Casi todo
 | Cambio | Motivo |
 |---|---|
 | `_template` dentro de `src/games/` (no en la raíz) | Crear un juego nuevo es copiar la carpeta junto a las existentes |
-| Audio separado por skin (`audio/poio/`, `audio/marcus/`) | Coherencia con la separación de sprites |
+| Audio separado por skin (`audio/pollo/`, `audio/marcus/`) | Coherencia con la separación de sprites |
 | `.gitkeep` en carpetas vacías | Git no versiona directorios vacíos |
 | Objetivo de distribución principal: `.html` único | La spec lo trata como opcional. Aquí es el objetivo principal |
 | **Arte procedural** (Canvas 2D) en vez de sprites en fichero | No hay ilustraciones todavía, y así el `.html` sigue siendo ligero. Cada skin genera sus animaciones a partir de su `look` en `skins.config.ts` |
@@ -377,7 +377,7 @@ Se mantiene la grafía "arround" (con doble *r*) porque es el ID fijo del juego 
 |---|---|---|
 | **1. Base técnica** ✅ | Vite + TS + Phaser, shell, registro, servicios, plantilla | App capaz de lanzar módulos |
 | **2. Prototipo jugable** ✅ | Scroll, salto, comida, obstáculos, gas, puntos, temporizador | Partida completa |
-| **3. Identidad** 🟡 | Sprites y sonidos de Poio y Marcus, selector, intensidades | Hecho con arte y sonido procedurales; faltan ilustraciones y audios "de verdad" si se quieren |
+| **3. Identidad** 🟡 | Sprites y sonidos de Pollo y Marcus, selector, intensidades | Hecho con arte y sonido procedurales; faltan ilustraciones y audios "de verdad" si se quieren |
 | **4. Pulido** 🟡 | Parallax, partículas, HUD responsive, ajustes, accesibilidad | Hecho lo principal; ver pendientes |
 | **5. Calidad y release** 🟡 | Tests, rendimiento, navegadores, publicación | 34 tests de lógica; falta e2e y publicar |
 

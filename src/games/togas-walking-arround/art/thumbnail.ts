@@ -35,7 +35,7 @@ export function getThumbnail(): string {
   ctx.fillStyle = '#4a4a58';
   ctx.fillRect(0, 162, width, 18);
 
-  // Nube de gas detrás de Poio.
+  // Nube de gas detrás de Pollo.
   for (const [x, y, r] of [[58, 112, 16], [44, 100, 12], [70, 98, 10]] as const) {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);

@@ -10,8 +10,8 @@ export { REFERENCE_HEIGHT_M, type BurpVoice, type CharacterLook, type FartVoice,
  */
 export const SKINS: readonly SkinDefinition[] = [
   {
-    id: 'poio',
-    displayName: 'Poio',
+    id: 'pollo',
+    displayName: 'Pollo',
     tagline: '1,80 m · Calvo y fuerte',
     heightM: 1.8,
     look: {

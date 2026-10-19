@@ -80,7 +80,7 @@ export function renderTrumpetFart(voice: FartVoice, variant: TrumpetVariant, int
   const rand = makeRandom(seed);
   const shape = BRASS[variant];
   const n = Math.floor(shape.duration * sampleRate);
-  // El tono del "instrumento" sale de la voz de la skin: Poio suena más grave que Marcus.
+  // El tono del "instrumento" sale de la voz de la skin: Pollo suena más grave que Marcus.
   const base = voice.basePitch * 2.6 * (0.96 + rand() * 0.08);
   const vibrato = smoothNoise(rand, n, sampleRate, 5.5);
   const f0 = new Float32Array(n);

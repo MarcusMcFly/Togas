@@ -6,7 +6,7 @@ import { finish } from '../../../core/audio/synth';
 
 /**
  * Resuelve el sonido de una emisión a partir de la skin activa: el sistema de gas
- * nunca menciona a Poio ni a Marcus, solo pide "el eructo de nivel N de esta skin".
+ * nunca menciona a Pollo ni a Marcus, solo pide "el eructo de nivel N de esta skin".
  *
  * Equivale a la convención de ficheros de la spec (`<skin>_<tipo>_t0N_v0M.ogg`):
  * skin → voz, tipo → sintetizador, tier → intensidad, variante → semilla. Cada

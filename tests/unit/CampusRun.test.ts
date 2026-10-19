@@ -26,7 +26,7 @@ describe('Créditos de Campus', () => {
   it('rechaza transferencias manipuladas o corruptas', () => {
     const valid = {
       sourceGameId: 'togas-walking-arround', destinationGameId: 'togas-silent-class',
-      sourceScore: 1000, credits: 4, skinId: 'poio', createdAt: 1, consumed: false,
+      sourceScore: 1000, credits: 4, skinId: 'pollo', createdAt: 1, consumed: false,
     };
     expect(parseTransfer(valid)).toEqual(valid);
     expect(parseTransfer({ ...valid, credits: 12 })).toBeNull();
@@ -57,21 +57,21 @@ describe('CampusRunManager', () => {
 
   it('caduca a los 10 minutos', () => {
     const { manager, advance } = setup();
-    manager.offerTransfer({ sourceGameId: 'togas-walking-arround', sourceScore: 1000, skinId: 'poio' });
+    manager.offerTransfer({ sourceGameId: 'togas-walking-arround', sourceScore: 1000, skinId: 'pollo' });
     advance(CAMPUS_RUN_RULES.transferTtlMs + 1);
     expect(manager.consumeTransfer('togas-silent-class')).toBeNull();
   });
 
   it('solo vale para el juego de destino', () => {
     const { manager } = setup();
-    manager.offerTransfer({ sourceGameId: 'togas-walking-arround', sourceScore: 1000, skinId: 'poio' });
+    manager.offerTransfer({ sourceGameId: 'togas-walking-arround', sourceScore: 1000, skinId: 'pollo' });
     expect(manager.peekTransfer('togas-walking-arround')).toBeNull();
-    expect(manager.offerTransfer({ sourceGameId: 'togas-silent-class', sourceScore: 1000, skinId: 'poio' })).toBeNull();
+    expect(manager.offerTransfer({ sourceGameId: 'togas-silent-class', sourceScore: 1000, skinId: 'pollo' })).toBeNull();
   });
 
   it('sobrevive a una recarga (mismo almacén, nuevo gestor)', () => {
     const { manager, store } = setup();
-    manager.offerTransfer({ sourceGameId: 'togas-walking-arround', sourceScore: 750, skinId: 'poio' });
+    manager.offerTransfer({ sourceGameId: 'togas-walking-arround', sourceScore: 750, skinId: 'pollo' });
     const reloaded = new CampusRunManager({ sequence: SEQUENCE, store, now: () => 1_000_500 });
     expect(reloaded.consumeTransfer('togas-silent-class')?.credits).toBe(3);
   });

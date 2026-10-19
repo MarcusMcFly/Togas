@@ -3,7 +3,7 @@ import { renderBurp, renderFart } from '../../src/core/characters/voiceSynth';
 import { SKINS } from '../../src/core/characters/CharacterRegistry';
 
 const SR = 22050;
-const [poio, marcus] = SKINS;
+const [pollo, marcus] = SKINS;
 
 function stats(samples: Float32Array) {
   let peak = 0;
@@ -22,7 +22,7 @@ describe('Síntesis de eructos y pedos', () => {
 
     it(`${name}: señal válida, sin picos peligrosos y con cuerpo (no solo un chasquido)`, () => {
       for (let tier = 1; tier <= 5; tier++) {
-        const { peak, rms } = stats(render(voice(poio), tier, 7, SR));
+        const { peak, rms } = stats(render(voice(pollo), tier, 7, SR));
         expect(peak).toBeLessThanOrEqual(0.9001);
         expect(rms).toBeGreaterThan(0.08);
       }
@@ -34,12 +34,12 @@ describe('Síntesis de eructos y pedos', () => {
     });
 
     it(`${name}: la misma variante suena siempre igual y otra variante, distinta`, () => {
-      expect(render(voice(poio), 3, 1, SR)).toEqual(render(voice(poio), 3, 1, SR));
-      expect(render(voice(poio), 3, 1, SR)).not.toEqual(render(voice(poio), 3, 2, SR));
+      expect(render(voice(pollo), 3, 1, SR)).toEqual(render(voice(pollo), 3, 1, SR));
+      expect(render(voice(pollo), 3, 1, SR)).not.toEqual(render(voice(pollo), 3, 2, SR));
     });
 
-    it(`${name}: Poio y Marcus suenan distinto (AC-03)`, () => {
-      expect(render(voice(poio), 2, 1, SR)).not.toEqual(render(voice(marcus), 2, 1, SR));
+    it(`${name}: Pollo y Marcus suenan distinto (AC-03)`, () => {
+      expect(render(voice(pollo), 2, 1, SR)).not.toEqual(render(voice(marcus), 2, 1, SR));
     });
   }
 });

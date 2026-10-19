@@ -45,8 +45,8 @@ describe('Arquitectura', () => {
     expect(violations).toEqual([]);
   });
 
-  it('las skins no tienen lógica propia en los juegos (sin `skin === "poio"`)', () => {
-    const offenders = files.filter((f) => f.startsWith(`${ROOT}games/`) && /===\s*['"](poio|marcus)['"]/.test(SOURCES[f]));
+  it('las skins no tienen lógica propia en los juegos (sin `skin === "pollo"`)', () => {
+    const offenders = files.filter((f) => f.startsWith(`${ROOT}games/`) && /===\s*['"](pollo|marcus)['"]/.test(SOURCES[f]));
     expect(offenders).toEqual([]);
   });
 
