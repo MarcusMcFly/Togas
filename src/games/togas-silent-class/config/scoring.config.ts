@@ -21,7 +21,11 @@ export function comboMultiplier(streak: number): number {
   return COMBO_MULTIPLIERS[Math.min(streak, COMBO_MULTIPLIERS.length - 1)];
 }
 
-/** Alcance de la nube según la presión al soltar (tabla 10.2). `reach` en píxeles lógicos. */
+/**
+ * Alcance de la nube según la presión al soltar (tabla 10.2). `reach` en píxeles lógicos.
+ * La última fila (esquinas a ~431 px del jugador) se alcanza desde el tier 3 (presión 60):
+ * soltar en silencio por encima de 80 es casi imposible con el equilibrio.
+ */
 export interface EmissionTier {
   tier: number;
   from: number;
@@ -35,10 +39,15 @@ export interface EmissionTier {
 export const EMISSION_TIERS: readonly EmissionTier[] = [
   { tier: 1, from: 0, name: 'Susurro', minTargets: 0, maxTargets: 1, reach: 260, color: '#b5e36b' },
   { tier: 2, from: 40, name: 'Nube sigilosa', minTargets: 1, maxTargets: 2, reach: 290, color: '#8bd450' },
-  { tier: 3, from: 60, name: 'Brisa de aula', minTargets: 2, maxTargets: 3, reach: 340, color: '#5ec46a' },
-  { tier: 4, from: 80, name: 'Apocalipsis silencioso', minTargets: 3, maxTargets: 5, reach: 440, color: '#3fb7a0' },
+  { tier: 3, from: 60, name: 'Brisa de aula', minTargets: 2, maxTargets: 3, reach: 440, color: '#5ec46a' },
+  { tier: 4, from: 80, name: 'Apocalipsis silencioso', minTargets: 3, maxTargets: 5, reach: 520, color: '#3fb7a0' },
   { tier: 5, from: 95, name: 'Sigilo legendario', minTargets: 4, maxTargets: 6, reach: 640, color: '#b06cff' },
 ];
+
+/** Presión mínima cuya nube llega a esta distancia (null si ninguna llega). */
+export function pressureToReach(distance: number): number | null {
+  return EMISSION_TIERS.find((t) => t.reach >= distance)?.from ?? null;
+}
 
 export function emissionTier(pressure: number): EmissionTier {
   for (let i = EMISSION_TIERS.length - 1; i >= 0; i--) if (pressure >= EMISSION_TIERS[i].from) return EMISSION_TIERS[i];

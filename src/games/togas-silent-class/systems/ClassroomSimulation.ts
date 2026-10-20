@@ -5,7 +5,7 @@ import { GAME_CONFIG } from '../config/game.config';
 import type { PerkId } from '../config/perks.config';
 import { REACTION_CONFIG } from '../config/reactions.config';
 import { STANDALONE_CLASSROOM_RULES, type ClassroomRules } from '../config/ruleset';
-import { performanceTitle } from '../config/scoring.config';
+import { performanceTitle, pressureToReach } from '../config/scoring.config';
 import { STUDENT_SEATS, STUDENT_TIMINGS } from '../config/students.config';
 import { BalanceSystem, type LevelStatus } from './BalanceSystem';
 import { DifficultySystem, type DifficultyOutput } from './DifficultySystem';
@@ -379,7 +379,11 @@ export class ClassroomSimulation {
       });
       // En el tutorial siempre cae al menos uno: es la recompensa que enseña la mecánica.
       const tier = this.options.tutorial ? { ...outcome.tier, minTargets: Math.max(1, outcome.tier.minTargets) } : outcome.tier;
+      const nearest = this.students.nearestAwakeDistance;
       const cloud = this.students.applyCloud(tier, this.rng, !detected);
+      if (!detected && !this.targetingProfessor && nearest > tier.reach && nearest !== Number.POSITIVE_INFINITY) {
+        this.bus.emit('CLOUD_OUT_OF_REACH', { pressure: outcome.pressure, neededPressure: pressureToReach(nearest) });
+      }
       for (const id of cloud.drowsy) this.bus.emit('STUDENT_DROWSY', { studentId: id });
       for (const id of cloud.asleep) this.bus.emit('STUDENT_FELL_ASLEEP', { studentId: id });
       this.publishReactions(this.students.react({

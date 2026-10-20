@@ -29,6 +29,8 @@ export interface ClassroomEvents extends Record<string, unknown> {
     duringSilence: boolean;
     holdSec: number;
   };
+  /** Nube silenciosa que no llega a ningún compañero sin noquear: hace falta más presión. */
+  CLOUD_OUT_OF_REACH: { pressure: number; neededPressure: number | null };
   STUDENT_DROWSY: { studentId: string };
   STUDENT_FELL_ASLEEP: { studentId: string };
   STUDENT_STARTLED: { studentId: string };

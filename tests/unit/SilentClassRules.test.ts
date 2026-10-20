@@ -82,6 +82,19 @@ describe('StudentReactionSystem', () => {
     expect(second.some((id) => first.includes(id))).toBe(false);
   });
 
+  it('la última fila se alcanza con presión 60 (tier 3)', () => {
+    const farthest = Math.max(...make().all.map((s) => s.distance));
+    expect(emissionTier(60).reach).toBeGreaterThanOrEqual(farthest);
+  });
+
+  it('nearestAwakeDistance ignora a los noqueados', () => {
+    const students = make();
+    const before = students.nearestAwakeDistance;
+    students.applyCloud({ ...EMISSION_TIERS[4], minTargets: 12, maxTargets: 12 }, new Random(1));
+    expect(students.nearestAwakeDistance).toBe(Number.POSITIVE_INFINITY);
+    expect(before).toBeLessThan(Number.POSITIVE_INFINITY);
+  });
+
   it('si el profe mira, la nube solo adormila', () => {
     const students = make();
     const result = students.applyCloud(EMISSION_TIERS[3], new Random(1), false);

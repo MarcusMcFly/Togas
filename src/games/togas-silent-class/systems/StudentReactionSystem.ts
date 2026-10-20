@@ -111,6 +111,11 @@ export class StudentReactionSystem {
     return this.asleepCount === this.students.length;
   }
 
+  /** Distancia del compañero sin noquear más cercano (Infinity si ya están todos). */
+  get nearestAwakeDistance(): number {
+    return this.students.reduce((d, s) => (s.knockedOut ? d : Math.min(d, s.distance)), Number.POSITIVE_INFINITY);
+  }
+
   stateOf(id: string): StudentState | null {
     return this.students.find((s) => s.id === id)?.state ?? null;
   }
