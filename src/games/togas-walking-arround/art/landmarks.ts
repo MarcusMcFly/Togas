@@ -330,8 +330,8 @@ export function drawHome(ctx: Ctx): void {
 
   // Ventanas: casi todas a oscuras, alguna encendida (la de Pollo, la que más).
   const windows: ReadonlyArray<readonly [number, number, boolean]> = [
-    [64, 92, false], [cx - 16, 92, true], [width - 96, 92, false],
-    [64, 168, true], [width - 96, 168, false],
+    [64, 102, false], [cx - 16, 102, true], [width - 96, 102, false],
+    [64, 172, true], [width - 96, 172, false],
   ];
   for (const [x, y, on] of windows) {
     if (on) {
@@ -353,10 +353,10 @@ export function drawHome(ctx: Ctx): void {
     ctx.stroke();
   }
 
-  // Rótulo.
-  roundRectPath(ctx, cx - 92, 230, 184, 26, 6);
+  // Rótulo bajo el tejado: por encima de la cabeza del personaje cuando se para en la puerta.
+  roundRectPath(ctx, cx - 92, 70, 184, 26, 6);
   fillStroke(ctx, '#2b2340', 2);
-  label(ctx, 'HOGAR, DULCE HOGAR', cx, 243, 14, lit);
+  label(ctx, 'HOGAR, DULCE HOGAR', cx, 83, 14, lit);
 
   // Farolillo y luz del portal.
   const porch = ctx.createRadialGradient(cx, groundY - 70, 0, cx, groundY - 70, 110);
