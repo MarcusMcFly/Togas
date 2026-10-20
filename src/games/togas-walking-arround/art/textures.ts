@@ -8,7 +8,8 @@ import {
 } from './city';
 import { FX_CANVAS, drawBubble, drawGlow, drawPuff, drawRing, drawShadow, drawSpark } from './effects';
 import { ITEM_CANVAS, OBSTACLE_CANVAS, drawCollectible, drawObstacle } from './items';
-import { TRAVERSAL_CANVAS, UNIVERSITY_CANVAS, drawTraversal, drawUniversity } from './landmarks';
+import { HOME_CANVAS, TRAVERSAL_CANVAS, UNIVERSITY_CANVAS, drawHome, drawTraversal, drawUniversity } from './landmarks';
+import type { LandmarkId } from '../config/ruleset';
 import {
   ANGRY_POSE, FACE_CANVAS, FLEE_FRAMES, PERSON_CANVAS, SURPRISED_POSE, WALK_FRAMES,
   drawFaceBubble, drawPerson, fleePose, walkPose,
@@ -35,7 +36,22 @@ export const TEX = {
   glow: 'fx:glow',
   shadow: 'fx:shadow',
   university: 'landmark:university',
+  home: 'landmark:home',
 } as const;
+
+/** Capa de la ciudad (TEX.sky, TEX.buildings…) en su versión de día o de noche. */
+export const cityTex = (base: string, night: boolean): string => (night ? `${base}:night` : base);
+
+/** Textura y lienzo de cada edificio de salida/llegada. */
+export const LANDMARKS: Readonly<Record<LandmarkId, { key: string; canvas: { width: number; height: number; groundY: number; night?: boolean } }>> = {
+  university: { key: TEX.university, canvas: UNIVERSITY_CANVAS },
+  home: { key: TEX.home, canvas: HOME_CANVAS },
+};
+
+export interface TextureOptions {
+  /** Genera también la ciudad de noche (solo si la partida la usa: son texturas grandes). */
+  night: boolean;
+}
 
 export const charTex = (skinId: string, pose: string): string => `char:${skinId}:${pose}`;
 export const headTex = (skinId: string): string => `head:${skinId}`;
@@ -74,15 +90,20 @@ function paint(
 }
 
 /** Genera todas las texturas del juego. Se llama una vez por sesión, en BootScene. */
-export function generateTextures(scene: Phaser.Scene, skins: readonly SkinDefinition[]): void {
+export function generateTextures(
+  scene: Phaser.Scene,
+  skins: readonly SkinDefinition[],
+  options: TextureOptions = { night: false },
+): void {
   const t = scene.textures;
   const L = CITY_LAYERS;
 
-  paint(t, TEX.sky, L.sky.width, L.sky.height, drawSky);
-  paint(t, TEX.clouds, L.clouds.width, L.clouds.height, drawClouds);
-  paint(t, TEX.skyline, L.skyline.width, L.skyline.height, drawSkyline);
-  paint(t, TEX.buildings, L.buildings.width, L.buildings.height, drawBuildings);
-  paint(t, TEX.street, L.street.width, L.street.height, drawStreet);
+  const night = options.night;
+  paint(t, cityTex(TEX.sky, night), L.sky.width, L.sky.height, (ctx) => drawSky(ctx, night));
+  paint(t, cityTex(TEX.clouds, night), L.clouds.width, L.clouds.height, (ctx) => drawClouds(ctx, night));
+  paint(t, cityTex(TEX.skyline, night), L.skyline.width, L.skyline.height, (ctx) => drawSkyline(ctx, night));
+  paint(t, cityTex(TEX.buildings, night), L.buildings.width, L.buildings.height, (ctx) => drawBuildings(ctx, night));
+  paint(t, cityTex(TEX.street, night), L.street.width, L.street.height, (ctx) => drawStreet(ctx, night));
 
   paint(t, TEX.puff, FX_CANVAS.puff, FX_CANVAS.puff, drawPuff);
   paint(t, TEX.ring, FX_CANVAS.ring, FX_CANVAS.ring, drawRing);
@@ -102,6 +123,7 @@ export function generateTextures(scene: Phaser.Scene, skins: readonly SkinDefini
     paint(t, barrierTex(barrier.id), c.width, c.height, (ctx) => drawTraversal(ctx, barrier.id));
   }
   paint(t, TEX.university, UNIVERSITY_CANVAS.width, UNIVERSITY_CANVAS.height, drawUniversity);
+  paint(t, TEX.home, HOME_CANVAS.width, HOME_CANVAS.height, drawHome);
   for (let frame = 0; frame < 4; frame++) paint(t, pigeonTex(frame), 40, 32, (ctx) => drawPigeon(ctx, frame));
 
   const P = PERSON_CANVAS;

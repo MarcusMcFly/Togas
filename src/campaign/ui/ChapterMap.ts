@@ -2,7 +2,7 @@ import { createButton } from '../../core/ui/Button';
 import { h } from '../../core/ui/dom';
 import type { ChapterSummary } from '../CampaignManager';
 import { duration } from '../systems/MissionResultAdapter';
-import type { MissionNode, NodeState } from '../systems/MissionProgressSystem';
+import { describeNextCharacter, type MissionNode, type NextCharacterStatus, type NodeState } from '../systems/MissionProgressSystem';
 import type { ChapterDefinition, MissionDefinition } from '../types';
 
 const STATE_LABELS: Record<NodeState, string> = {
@@ -23,6 +23,8 @@ export type MapAction =
 export interface ChapterMapOptions {
   chapter: ChapterDefinition;
   inDevelopment: boolean;
+  /** Desbloqueo del siguiente personaje según la mejor puntuación final del capítulo. */
+  nextCharacter: NextCharacterStatus | null;
   nodes: readonly MissionNode[];
   summary: ChapterSummary | null;
   action: MapAction;
@@ -67,15 +69,17 @@ export function createChapterMap(options: ChapterMapOptions): HTMLElement {
       notice = h('p', { className: 'camp-notice camp-notice--danger', text: `Intento perdido. ${action.reason}` });
       actions.append(createButton({ label: 'Empezar el capítulo de nuevo', icon: '↻', onClick: options.onRestart }));
       break;
-    case 'done':
+    case 'done': {
+      const unlock = !action.next && options.nextCharacter ? ` ${describeNextCharacter(options.nextCharacter)}` : '';
       notice = h('p', {
         className: 'camp-notice',
         text: action.next
           ? `¡Misiones jugables superadas! ${action.next.code} «${action.next.title}» está en desarrollo y llegará pronto.`
-          : '¡Capítulo completado!',
+          : `¡Capítulo completado!${unlock}`,
       });
       actions.append(createButton({ label: 'Rejugar el capítulo', icon: '↻', variant: 'secondary', onClick: options.onRestart }));
       break;
+    }
   }
 
   const stat = (label: string, value: string, className?: string) =>

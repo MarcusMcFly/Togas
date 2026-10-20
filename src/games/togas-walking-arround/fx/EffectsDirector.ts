@@ -27,7 +27,8 @@ export class EffectsDirector {
   /** En dispositivos lentos se reducen las partículas. */
   lowQuality = false;
 
-  constructor(private readonly scene: Phaser.Scene) {
+  /** @param facing +1 si el personaje avanza hacia la derecha, -1 si hacia la izquierda. */
+  constructor(private readonly scene: Phaser.Scene, private readonly facing: 1 | -1 = 1) {
     const puffScale = 1 / ART_SCALE;
     const gasCloud = (angle: { min: number; max: number }, tint: number[]) =>
       scene.add
@@ -44,8 +45,10 @@ export class EffectsDirector {
         })
         .setDepth(DEPTH.fx);
 
-    this.burpEmitter = gasCloud({ min: -50, max: 15 }, BURP_TINTS);
-    this.fartEmitter = gasCloud({ min: 150, max: 215 }, FART_TINTS);
+    // Ángulos para quien mira a la derecha; si mira a la izquierda se reflejan (180° − a).
+    const facingAngle = (min: number, max: number) => (facing > 0 ? { min, max } : { min: 180 - max, max: 180 - min });
+    this.burpEmitter = gasCloud(facingAngle(-50, 15), BURP_TINTS);
+    this.fartEmitter = gasCloud(facingAngle(150, 215), FART_TINTS);
     this.sparkEmitter = scene.add
       .particles(0, 0, TEX.spark, {
         emitting: false,
@@ -82,13 +85,13 @@ export class EffectsDirector {
     const calm = reducedMotion || this.lowQuality;
     emitter.explode(calm ? Math.ceil(fx.particles / 2) : fx.particles, origin.x, origin.y);
 
-    if (fx.cloudScale > 0) this.bigCloud(origin, fx.cloudScale, isBurp ? BURP_TINTS[0] : FART_TINTS[0], isBurp ? 1 : -1);
+    if (fx.cloudScale > 0) this.bigCloud(origin, fx.cloudScale, isBurp ? BURP_TINTS[0] : FART_TINTS[0], (isBurp ? 1 : -1) * this.facing);
     if (fx.ringRadius > 0 && !reducedMotion) this.ring(origin, fx.ringRadius, fx.color);
     if (fx.shake > 0 && !reducedMotion) this.scene.cameras.main.shake(180 + emission.tier * 60, fx.shake);
 
     const words = isBurp ? fx.words.burp : fx.words.fart;
     const word = words[emission.variant % words.length];
-    const textX = Phaser.Math.Clamp(origin.x + (isBurp ? 90 : -40), 140, GAME_CONFIG.view.width - 140);
+    const textX = Phaser.Math.Clamp(origin.x + (isBurp ? 90 : -40) * this.facing, 140, GAME_CONFIG.view.width - 140);
     this.comicText(word, textX, origin.y - 50, fx.textSize, fx.color, isBurp ? -8 : 8);
 
     if (fx.celebrate) {

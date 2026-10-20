@@ -31,6 +31,27 @@ export function isChapterComplete(chapter: ChapterDefinition, completed: readonl
   return chapter.missions.every((m) => done.has(m.id));
 }
 
+/** Si una puntuación final de capítulo llega para desbloquear al siguiente personaje. */
+export interface NextCharacterStatus {
+  required: number;
+  score: number;
+  reached: boolean;
+}
+
+export function nextCharacterStatus(chapter: ChapterDefinition, score: number): NextCharacterStatus | null {
+  const required = chapter.nextCharacterScore;
+  if (required === undefined) return null;
+  return { required, score, reached: score >= required };
+}
+
+/** Texto para el jugador: qué ha conseguido (o cuánto le falta) para el siguiente personaje. */
+export function describeNextCharacter(status: NextCharacterStatus, unlockedNames: readonly string[] = []): string {
+  const points = (n: number) => n.toLocaleString('es-ES');
+  if (unlockedNames.length) return `🔓 ¡Nuevo personaje desbloqueado: ${unlockedNames.join(', ')}!`;
+  if (status.reached) return `🔓 ¡Superas los ${points(status.required)} puntos! El siguiente personaje queda desbloqueado para cuando llegue su capítulo.`;
+  return `🔒 Para desbloquear al siguiente personaje hay que terminar el capítulo con ${points(status.required)} puntos. Te han faltado ${points(status.required - status.score)}.`;
+}
+
 /** Hay alguna misión reservada sin implementar: el capítulo está "En desarrollo". */
 export function isChapterInDevelopment(chapter: ChapterDefinition): boolean {
   return chapter.missions.some((m) => m.status === 'planned');

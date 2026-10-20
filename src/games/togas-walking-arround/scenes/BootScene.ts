@@ -13,7 +13,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    generateTextures(this, SKINS);
+    generateTextures(this, SKINS, { night: this.rt.ruleset.night });
     createAnimations(this, SKINS);
     this.scene.start(this.rt.mission ? 'play' : 'select');
   }

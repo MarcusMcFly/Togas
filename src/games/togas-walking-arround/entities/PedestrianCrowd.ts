@@ -5,6 +5,7 @@ import { GAME_CONFIG } from '../config/game.config';
 import {
   PEDESTRIAN_CONFIG, PEDESTRIAN_LOOKS, type PedestrianLook, type ReactionType,
 } from '../config/pedestrians.config';
+import { FORWARD_VIEW, type ViewDirection } from '../systems/ViewDirection';
 import { DEPTH, addText } from '../ui/theme';
 
 type State = 'walk' | 'react' | 'flee';
@@ -23,6 +24,7 @@ interface Pedestrian {
   /** Sentido del paseo en el mundo: -1 hacia el jugador, +1 en su mismo sentido. */
   direction: number;
   reactUntil: number;
+  /** Sentido de la huida en el mundo (como `direction`). */
   fleeDirection: number;
 }
 
@@ -33,6 +35,7 @@ const FACE_SCALE = 1.25 / ART_SCALE;
 export interface CrowdOptions {
   /** Pasean en ambos sentidos (si no, todos van hacia el jugador). */
   bothWays: boolean;
+  view?: ViewDirection;
 }
 
 /**
@@ -43,11 +46,13 @@ export interface CrowdOptions {
 export class PedestrianCrowd {
   private readonly people: Pedestrian[] = [];
   private nextSpawnAt: number = PEDESTRIAN_CONFIG.spawnEvery[0];
+  private readonly view: ViewDirection;
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly options: CrowdOptions = { bothWays: false },
   ) {
+    this.view = options.view ?? FORWARD_VIEW;
     for (let i = 0; i < PEDESTRIAN_CONFIG.maxActive; i++) {
       const look = PEDESTRIAN_LOOKS[0];
       const sprite = scene.add
@@ -80,10 +85,11 @@ export class PedestrianCrowd {
       else if (now >= p.reactUntil) this.walk(p);
 
       const x = p.worldX - distance;
-      p.sprite.x = x;
+      const screenX = this.view.x(x);
+      p.sprite.x = screenX;
       const headTop = GAME_CONFIG.groundY - PERSON_HEIGHT * p.look.scale;
-      p.face.setPosition(x, headTop - 44);
-      p.label.setPosition(x, p.face.visible ? headTop - 96 : headTop - 18);
+      p.face.setPosition(screenX, headTop - 44);
+      p.label.setPosition(screenX, p.face.visible ? headTop - 96 : headTop - 18);
 
       if (x < -80 || x > width + 160) this.release(p);
     }
@@ -137,8 +143,8 @@ export class PedestrianCrowd {
   private walk(p: Pedestrian): void {
     p.state = 'walk';
     this.hideBubble(p);
-    // Dibujados mirando a la derecha: se voltean si pasean hacia la izquierda (hacia el jugador).
-    p.sprite.setFlipX(p.direction < 0).setAngle(0);
+    // Dibujados mirando a la derecha: se voltean si en pantalla pasean hacia la izquierda.
+    p.sprite.setFlipX(this.view.dir(p.direction) < 0).setAngle(0);
     p.sprite.play(pedWalkAnim(p.look.id), true);
   }
 
@@ -152,8 +158,9 @@ export class PedestrianCrowd {
     if (reaction === 'flee') {
       p.state = 'flee';
       this.hideBubble(p);
-      p.fleeDirection = dx >= 0 ? 1 : -1;
-      p.sprite.setFlipX(p.fleeDirection < 0);
+      // `dx` es de pantalla: huye alejándose del jugador tal y como se ve.
+      p.fleeDirection = this.view.dir(dx >= 0 ? 1 : -1);
+      p.sprite.setFlipX(this.view.dir(p.fleeDirection) < 0);
       p.sprite.play(pedFleeAnim(p.look.id), true);
       // Respingo antes de salir corriendo.
       scene.tweens.add({ targets: p.sprite, y: GAME_CONFIG.groundY - 14, duration: 110, yoyo: true, ease: 'Quad.easeOut' });

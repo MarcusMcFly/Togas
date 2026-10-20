@@ -293,3 +293,93 @@ export function drawUniversity(ctx: Ctx): void {
   }
   ctx.restore();
 }
+
+/** Portal de casa de noche (meta de la vuelta). La puerta queda en el centro. */
+export const HOME_CANVAS = { width: 320, height: 360, groundY: 356, night: true } as const;
+
+export function drawHome(ctx: Ctx): void {
+  const { width, groundY } = HOME_CANVAS;
+  const cx = width / 2;
+  const brick = '#7a4b52';
+  const lit = '#ffd36b';
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Tejado y chimenea.
+  roundRectPath(ctx, 228, 18, 26, 46, 3);
+  fillStroke(ctx, shade(brick, -0.2), 2);
+  ctx.beginPath();
+  ctx.moveTo(14, 66);
+  ctx.lineTo(cx, 20);
+  ctx.lineTo(width - 14, 66);
+  ctx.closePath();
+  fillStroke(ctx, '#3b3f5c');
+
+  // Fachada con hileras de ladrillo.
+  roundRectPath(ctx, 26, 62, width - 52, groundY - 62, 3);
+  fillStroke(ctx, brick);
+  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+  ctx.lineWidth = 1;
+  for (let y = 74; y < groundY - 6; y += 14) {
+    ctx.beginPath();
+    ctx.moveTo(28, y);
+    ctx.lineTo(width - 28, y);
+    ctx.stroke();
+  }
+
+  // Ventanas: casi todas a oscuras, alguna encendida (la de Pollo, la que más).
+  const windows: ReadonlyArray<readonly [number, number, boolean]> = [
+    [64, 92, false], [cx - 16, 92, true], [width - 96, 92, false],
+    [64, 168, true], [width - 96, 168, false],
+  ];
+  for (const [x, y, on] of windows) {
+    if (on) {
+      const g = ctx.createRadialGradient(x + 16, y + 22, 0, x + 16, y + 22, 44);
+      g.addColorStop(0, 'rgba(255,214,120,0.45)');
+      g.addColorStop(1, 'rgba(255,214,120,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 28, y - 22, 88, 88);
+    }
+    roundRectPath(ctx, x, y, 32, 44, 3);
+    fillStroke(ctx, on ? lit : '#2a3060', 2);
+    ctx.strokeStyle = on ? 'rgba(160,110,40,0.6)' : 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 16, y + 3);
+    ctx.lineTo(x + 16, y + 41);
+    ctx.moveTo(x + 3, y + 22);
+    ctx.lineTo(x + 29, y + 22);
+    ctx.stroke();
+  }
+
+  // Rótulo.
+  roundRectPath(ctx, cx - 92, 230, 184, 26, 6);
+  fillStroke(ctx, '#2b2340', 2);
+  label(ctx, 'HOGAR, DULCE HOGAR', cx, 243, 14, lit);
+
+  // Farolillo y luz del portal.
+  const porch = ctx.createRadialGradient(cx, groundY - 70, 0, cx, groundY - 70, 110);
+  porch.addColorStop(0, 'rgba(255,214,120,0.5)');
+  porch.addColorStop(1, 'rgba(255,214,120,0)');
+  ctx.fillStyle = porch;
+  ctx.fillRect(cx - 110, groundY - 180, 220, 180);
+  circlePath(ctx, cx + 48, groundY - 92, 7);
+  fillStroke(ctx, '#fff6c8', 2);
+
+  // Puerta con montante y felpudo.
+  roundRectPath(ctx, cx - 30, groundY - 96, 60, 84, 4);
+  fillStroke(ctx, '#3d5a80');
+  ctx.beginPath();
+  ctx.arc(cx, groundY - 96, 30, Math.PI, 0);
+  ctx.closePath();
+  fillStroke(ctx, lit, 2);
+  circlePath(ctx, cx + 18, groundY - 54, 3);
+  fillStroke(ctx, '#ffd23f', 1.2);
+  roundRectPath(ctx, cx - 40, groundY - 12, 80, 8, 3);
+  fillStroke(ctx, '#b5651d', 2);
+  ellipsePath(ctx, cx, groundY - 2, 70, 4);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fill();
+  ctx.restore();
+}

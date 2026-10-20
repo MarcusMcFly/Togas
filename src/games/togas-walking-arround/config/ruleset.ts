@@ -11,8 +11,28 @@ export interface StreetRules {
   multiplier: { start: number; step: number; max: number };
   /** Acelerón temporal por emisión limpia (px/s), cuánto se pierde por segundo y velocidad tope. */
   speedBoost: { perEmission: number; decayPerSec: number; maxSpeed: number };
-  /** Estrellas de búsqueda con las que te detienen. */
-  maxWanted: number;
+  /**
+   * Qué cuesta un pedo con testigos: una estrella de policía (con `maxWanted`, detenido)
+   * o puntos de campaña (la misión no se puede perder por esto).
+   */
+  witnessPenalty: { kind: 'police'; maxWanted: number } | { kind: 'points'; points: number };
+}
+
+/** Edificios que marcan el principio y el final de un recorrido por distancia. */
+export type LandmarkId = 'university' | 'home';
+
+/** Meta por distancia: de dónde se sale, adónde se llega y qué pasa al llegar. */
+export interface DistanceGoal {
+  kind: 'distance';
+  /** px de mundo. */
+  distance: number;
+  destination: LandmarkId;
+  /** Edificio que se deja atrás al empezar (opcional). */
+  origin: LandmarkId | null;
+  /** Rótulo al llegar. */
+  arrivalText: string;
+  /** Llegar sin puntos de campaña cuenta como fallo. */
+  requiresPoints: boolean;
 }
 
 /**
@@ -28,7 +48,11 @@ export interface WalkingRuleset {
   /** `alternate`: eructo y pedo alternados. `fartOnly`: siempre pedo. */
   emissions: 'alternate' | 'fartOnly';
   /** Fin de la partida: por tiempo o al recorrer una distancia (px de mundo). */
-  goal: { kind: 'time'; durationSec: number } | { kind: 'distance'; distance: number };
+  goal: { kind: 'time'; durationSec: number } | DistanceGoal;
+  /** `forward`: se avanza hacia la derecha. `reverse`: hacia la izquierda (vuelta a casa). */
+  direction: 'forward' | 'reverse';
+  /** Ciudad de noche. */
+  night: boolean;
   /** `holdToJump`: mantener para saltar más. `tapAndSwipe`: tocar salta, deslizar abajo rueda. */
   controls: 'holdToJump' | 'tapAndSwipe';
   spawn: SpawnConfig;
@@ -50,4 +74,6 @@ export const STANDALONE_RULESET: WalkingRuleset = {
   traversal: [],
   street: null,
   pedestriansBothWays: false,
+  direction: 'forward',
+  night: false,
 };

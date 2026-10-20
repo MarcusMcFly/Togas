@@ -1,6 +1,7 @@
 import type { StageRecord } from '../../core/progression/CampaignSave';
 import { createButton } from '../../core/ui/Button';
 import { h } from '../../core/ui/dom';
+import { describeNextCharacter, type NextCharacterStatus } from '../systems/MissionProgressSystem';
 import type { MissionDefinition } from '../types';
 
 export interface ResultsOptions {
@@ -14,6 +15,8 @@ export interface ResultsOptions {
   next: MissionDefinition | null;
   /** Siguiente misión reservada pero sin implementar (para avisar). */
   upcoming: MissionDefinition | null;
+  /** Con esta misión se ha terminado el capítulo: estado del desbloqueo del siguiente personaje. */
+  chapterUnlock: { status: NextCharacterStatus | null; unlockedNames: readonly string[] } | null;
   onNext: () => void;
   onRetry: () => void;
   onRestart: () => void;
@@ -27,7 +30,9 @@ export function createResults(options: ResultsOptions): HTMLElement {
   const change = record.earned - record.lost;
   const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${Math.abs(n).toLocaleString('es-ES')}`;
 
-  const headline = won ? '¡MISIÓN CUMPLIDA!' : options.attemptLost ? 'INTENTO PERDIDO' : 'MISIÓN FALLIDA';
+  const chapterDone = won && options.chapterUnlock !== null;
+  const headline = chapterDone ? '¡CAPÍTULO COMPLETADO!' : won ? '¡MISIÓN CUMPLIDA!' : options.attemptLost ? 'INTENTO PERDIDO' : 'MISIÓN FALLIDA';
+  const unlock = options.chapterUnlock;
   const scores = h('dl', { className: 'results-score' }, [
     h('div', {}, [h('dt', { text: 'Al empezar' }), h('dd', { text: record.scoreBefore.toLocaleString('es-ES') })]),
     h('div', {}, [h('dt', { text: won ? 'Cambio' : 'En la misión' }), h('dd', { className: change < 0 ? 'is-loss' : 'is-gain', text: signed(change) })]),
@@ -56,6 +61,12 @@ export function createResults(options: ResultsOptions): HTMLElement {
       ? h('p', { className: 'camp-notice', text: `Al reintentar vuelves a empezar ${mission.code} con ${record.scoreBefore.toLocaleString('es-ES')} puntos.` })
       : null,
     scores,
+    unlock?.status
+      ? h('p', {
+        className: `camp-notice${unlock.status.reached ? '' : ' camp-notice--warn'}`,
+        text: describeNextCharacter(unlock.status, unlock.unlockedNames),
+      })
+      : null,
     stats,
     won && !options.next && options.upcoming
       ? h('p', { className: 'camp-notice', text: `Siguiente: ${options.upcoming.code} «${options.upcoming.title}». Está en desarrollo: tu puntuación queda guardada para cuando llegue.` })

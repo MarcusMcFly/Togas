@@ -6,10 +6,11 @@ import type { ChapterDefinition } from '../types';
 export const CHAPTERS: readonly ChapterDefinition[] = [POLLO_CHAPTER];
 
 /**
- * Reglas de desbloqueo. Pollo está disponible desde el principio. Los demás personajes
- * se añadirán con su condición cuando existan, p. ej.:
- *   { characterId: '…', condition: { type: 'chapterCompleted', chapterId: 'pollo', minScore: … } }
- * La spec aún no fija ningún umbral, así que no se inventa ninguno.
+ * Reglas de desbloqueo. Pollo está disponible desde el principio. El siguiente personaje
+ * se desbloquea terminando el capítulo de Pollo con `POLLO_CHAPTER.nextCharacterScore`
+ * puntos (1-3 decide la puntuación final). Cuando ese personaje exista, su regla será:
+ *   { characterId: '…', condition: { type: 'chapterCompleted', chapterId: 'pollo', minScore: POLLO_CHAPTER.nextCharacterScore } }
+ * Las mejores puntuaciones ya quedan guardadas, así que se desbloqueará con lo ya jugado.
  */
 export const UNLOCK_RULES: readonly UnlockRule[] = [
   { characterId: 'pollo', condition: { type: 'initial' } },

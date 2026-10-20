@@ -9,12 +9,14 @@ export interface EmissionVerdict {
   multiplier: number;
   wanted: number;
   arrested: boolean;
+  /** Puntos que cuesta (solo con penalización por puntos; 0 si fue limpia). */
+  pointsPenalty: number;
 }
 
 /**
  * Reglas de la calle (sin Phaser): un pedo sin testigos sube el multiplicador y da un
- * acelerón; con testigos, el multiplicador vuelve a ×1 y sube la búsqueda policial.
- * Con `maxWanted` estrellas, detenido.
+ * acelerón; con testigos, el multiplicador vuelve a ×1 y, según el reglamento, sube la
+ * búsqueda policial (con `maxWanted` estrellas, detenido) o se pierden puntos.
  */
 export class StreetSystem {
   multiplier: number;
@@ -23,6 +25,8 @@ export class StreetSystem {
   /** Velocidad extra actual (px/s); baja sola con el tiempo. */
   boost = 0;
   cleanEmissions = 0;
+  /** Pedos con testigos. */
+  witnessedEmissions = 0;
   pedestriansAffected = 0;
 
   constructor(private readonly rules: StreetRules) {
@@ -31,11 +35,14 @@ export class StreetSystem {
   }
 
   get arrested(): boolean {
-    return this.wanted >= this.rules.maxWanted;
+    const penalty = this.rules.witnessPenalty;
+    return penalty.kind === 'police' && this.wanted >= penalty.maxWanted;
   }
 
+  /** Estrellas con las que te detienen (0 si no hay policía). */
   get maxWanted(): number {
-    return this.rules.maxWanted;
+    const penalty = this.rules.witnessPenalty;
+    return penalty.kind === 'police' ? penalty.maxWanted : 0;
   }
 
   /** Puntos de una comida: base × multiplicador de la comida × multiplicador de emisiones. */
@@ -44,19 +51,22 @@ export class StreetSystem {
   }
 
   resolveEmission(witnesses: number): EmissionVerdict {
-    const { multiplier, speedBoost, maxWanted } = this.rules;
+    const { multiplier, speedBoost, witnessPenalty } = this.rules;
     const clean = witnesses <= 0 && !this.arrested;
+    let pointsPenalty = 0;
     if (clean) {
       this.cleanEmissions++;
       this.multiplier = Math.min(multiplier.max, round2(this.multiplier + multiplier.step));
       this.bestMultiplier = Math.max(this.bestMultiplier, this.multiplier);
       this.boost += speedBoost.perEmission;
     } else {
+      this.witnessedEmissions++;
       this.pedestriansAffected += Math.max(0, witnesses);
       this.multiplier = multiplier.start;
-      this.wanted = Math.min(maxWanted, this.wanted + 1);
+      if (witnessPenalty.kind === 'police') this.wanted = Math.min(witnessPenalty.maxWanted, this.wanted + 1);
+      else pointsPenalty = witnessPenalty.points;
     }
-    return { clean, witnesses, multiplier: this.multiplier, wanted: this.wanted, arrested: this.arrested };
+    return { clean, witnesses, multiplier: this.multiplier, wanted: this.wanted, arrested: this.arrested, pointsPenalty };
   }
 
   /** Tropiezo con un obstáculo: se pierden el multiplicador y el acelerón. */

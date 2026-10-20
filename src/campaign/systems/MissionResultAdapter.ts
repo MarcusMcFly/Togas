@@ -14,6 +14,13 @@ export const duration = (sec: number): string => `${Math.floor(sec / 60)}:${Stri
 
 export function describeWalking(stats: WalkingMissionStats, specialFood: string): StatRow[] {
   const stars = '★'.repeat(stats.wanted) + '☆'.repeat(Math.max(0, stats.maxWanted - stats.wanted));
+  // Sin policía (1-3), los testigos cuestan puntos en vez de estrellas.
+  const witnesses: StatRow[] = stats.maxWanted > 0
+    ? [{ label: 'Búsqueda policial final', value: stars || '—' }]
+    : [
+      { label: 'Pedos con testigos', value: num(stats.witnessedEmissions) },
+      { label: 'Puntos perdidos por testigos', value: stats.pointsLost > 0 ? `−${num(stats.pointsLost)}` : '0' },
+    ];
   return [
     { label: 'Puntos ganados', value: num(stats.pointsEarned) },
     { label: `${specialFood} recogidas`, value: num(stats.specialCollected) },
@@ -21,7 +28,7 @@ export function describeWalking(stats: WalkingMissionStats, specialFood: string)
     { label: 'Pedos sin testigos', value: `${stats.cleanEmissions} de ${stats.emissions}` },
     { label: 'Viandantes afectados', value: num(stats.pedestriansAffected) },
     { label: 'Multiplicador máximo', value: `×${stats.bestMultiplier.toLocaleString('es-ES', { maximumFractionDigits: 2 })}` },
-    { label: 'Búsqueda policial final', value: stars || '—' },
+    ...witnesses,
     { label: 'Tropiezos', value: num(stats.stumbles) },
     { label: 'Tiempo', value: duration(stats.durationSec) },
   ];

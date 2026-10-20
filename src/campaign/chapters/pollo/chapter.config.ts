@@ -5,7 +5,7 @@ import { describeClassroom, describeWalking } from '../../systems/MissionResultA
 import { missionRunner, type ChapterDefinition } from '../../types';
 import { LENTIL_COMMUTE_RULESET } from './level-1-1/walking-campaign.config';
 import { SILENT_CLASS_PENALTIES, SILENT_CLASS_RULES, SILENT_CLASS_TEXTS } from './level-1-2/classroom-campaign.config';
-import { RETURN_TO_BASE_NOTES } from './level-1-3/return-campaign.config';
+import { RETURN_HOME_RULESET } from './level-1-3/return-campaign.config';
 
 /** Capítulo 1: la misión de Pollo (spec 5). */
 export const POLLO_CHAPTER: ChapterDefinition = {
@@ -13,6 +13,8 @@ export const POLLO_CHAPTER: ChapterDefinition = {
   number: 1,
   title: 'La misión de Pollo',
   characterId: POLLO.id,
+  // Puntos con los que hay que acabar el capítulo para desbloquear al siguiente personaje.
+  nextCharacterScore: 15000,
   missions: [
     {
       id: 'pollo-1-1',
@@ -90,15 +92,36 @@ export const POLLO_CHAPTER: ChapterDefinition = {
       id: 'pollo-1-3',
       code: '1-3',
       title: 'Vuelta a la base',
-      environment: RETURN_TO_BASE_NOTES.environment,
+      environment: 'Ciudad, de noche',
       foundation: 'Togas Walking Around (en sentido contrario)',
-      status: 'planned',
-      scoring: RETURN_TO_BASE_NOTES.scoring,
+      status: 'playable',
+      // Vuelta: se gana y se pierde, pero la misión no se puede fallar.
+      scoring: { allowEarn: true, allowLose: true },
       briefing: {
-        story: ['Tras derrotar al aristócrata disfrazado, Pollo tiene que volver a casa… de noche.'],
-        controls: [],
-        rules: [],
+        story: [
+          'Misión cumplida. Un aristócrata menos.',
+          'Ya es de noche y Pollo vuelve a casa por la misma ciudad que recorrió por la mañana, ahora en sentido contrario.',
+          'Lo que consiga por el camino decidirá si el destino se fija en el siguiente héroe.',
+        ],
+        controls: [
+          'Toca la pantalla (o pulsa ESPACIO) para saltar.',
+          'Desliza hacia abajo (o pulsa ↓) para rodar bajo andamios y carteles.',
+        ],
+        rules: [
+          'Esta vez caminas de derecha a izquierda, de la universidad a casa.',
+          'Las lentejas valen ×3. El resto de la comida, ×1.',
+          'Pedo sin nadie cerca: multiplicador +0,25 (hasta ×3) y un acelerón.',
+          `Pedo con viandantes cerca: multiplicador a ×1 y −${RETURN_HOME_RULESET.street?.witnessPenalty.kind === 'points' ? RETURN_HOME_RULESET.street.witnessPenalty.points : 0} puntos. De noche no hay policía.`,
+          'Tropezar con una valla o un andamio te quita el multiplicador.',
+          'Esta misión no se puede perder: llegas a casa sí o sí. Pero tus puntos finales deciden si se desbloquea el siguiente personaje.',
+        ],
       },
+      runner: missionRunner<WalkingMissionStats>({
+        gameId: 'togas-walking-arround',
+        start: (context, host) => createWalkingMission(context, host, RETURN_HOME_RULESET),
+        describe: (stats) => describeWalking(stats, 'Lentejas'),
+        durationOf: (stats) => stats.durationSec,
+      }),
     },
   ],
 };

@@ -3,7 +3,7 @@ import { ART_SCALE, headTex } from '../art/textures';
 import { EMISSION_TIERS, getTierPresentation } from '../config/emission.config';
 import { GAME_CONFIG } from '../config/game.config';
 import type { TogasRuntime } from '../runtime';
-import { formatMultiplier, type HudState } from '../scenes/PlayScene';
+import { formatMultiplier, type HudState, type StreetHud } from '../scenes/PlayScene';
 import { COLORS, addText } from './theme';
 import { drawPanel } from '../../../core/ui/phaser/widgets';
 
@@ -11,6 +11,11 @@ const METER = { x: 618, y: 24, width: 230, height: 26 };
 /** Nombre de cada nivel de búsqueda policial (índice = estrellas). */
 const WANTED_LABELS = ['Inocente', 'Sospechoso', 'Alborotador', 'Molestia pública', 'Lo más buscado', '¡Detenido!'] as const;
 const PROGRESS = { width: 220, height: 22 } as const;
+/** Rótulo de la barra de progreso según el edificio de llegada. */
+const DESTINATION_LABELS: Readonly<Record<StreetHud['destination'], string>> = {
+  university: '🏛 Universidad',
+  home: '🏠 Casa',
+};
 
 const GAS_STOPS: ReadonlyArray<readonly [number, number]> = [
   [0, 0x8bd450],
@@ -147,8 +152,10 @@ export class GameHUD extends Phaser.Scene {
       g.clear();
       g.fillStyle(0xe8dcc4, 1).fillRoundedRect(x, y, PROGRESS.width, PROGRESS.height, 11);
       const w = Math.max(PROGRESS.height, PROGRESS.width * street.progress);
-      g.fillStyle(0x8bd450, 1).fillRoundedRect(x, y, w, PROGRESS.height, 11);
-      this.progressText.setText(`🏛 Universidad · ${progress} %`);
+      // Se llena en el sentido de la marcha.
+      const fillX = street.reversed ? x + PROGRESS.width - w : x;
+      g.fillStyle(0x8bd450, 1).fillRoundedRect(fillX, y, w, PROGRESS.height, 11);
+      this.progressText.setText(`${DESTINATION_LABELS[street.destination]} · ${progress} %`);
     }
     if (street.multiplier !== this.lastMultiplier && this.multiplierText) {
       const grew = street.multiplier > this.lastMultiplier && this.lastMultiplier > 0;
@@ -156,6 +163,10 @@ export class GameHUD extends Phaser.Scene {
       this.multiplierText.setText(`Multiplicador ×${formatMultiplier(street.multiplier)}`);
       this.multiplierText.setColor(street.multiplier > 1 ? '#b5e36b' : '#ffffff');
       if (grew) this.tweens.add({ targets: this.multiplierText, scale: { from: 1.3, to: 1 }, duration: 260, ease: 'Back.easeOut' });
+    }
+    if (street.penalty === 'points') {
+      this.updateWitnesses(street.witnessed);
+      return;
     }
     if (street.wanted !== this.lastWanted && this.starsText && this.wantedText) {
       const rose = street.wanted > this.lastWanted && this.lastWanted >= 0;
@@ -165,6 +176,17 @@ export class GameHUD extends Phaser.Scene {
       this.wantedText.setText(`🚓 ${WANTED_LABELS[Math.min(street.wanted, WANTED_LABELS.length - 1)]}`);
       if (rose) this.tweens.add({ targets: [this.starsText, this.wantedText], scale: { from: 1.5, to: 1 }, duration: 380, ease: 'Back.easeOut' });
     }
+  }
+
+  /** Sin policía: en vez de estrellas, cuántas veces te han olido. */
+  private updateWitnesses(witnessed: number): void {
+    if (witnessed === this.lastWanted || !this.starsText || !this.wantedText) return;
+    const rose = witnessed > this.lastWanted && this.lastWanted >= 0;
+    this.lastWanted = witnessed;
+    this.starsText.setText(witnessed === 0 ? '👃 Nadie te ha olido' : `👃 Te han olido ${witnessed} ${witnessed === 1 ? 'vez' : 'veces'}`);
+    this.starsText.setFontSize(18).setColor(witnessed === 0 ? '#c9c2e6' : '#ff8fa3');
+    this.wantedText.setText('Cada testigo te cuesta puntos');
+    if (rose) this.tweens.add({ targets: this.starsText, scale: { from: 1.4, to: 1 }, duration: 380, ease: 'Back.easeOut' });
   }
 
   private drawMeter(): void {
