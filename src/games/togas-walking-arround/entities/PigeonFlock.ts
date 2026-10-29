@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { ART_SCALE, PIGEON_FLY_ANIM, PIGEON_PECK_ANIM, pigeonTex } from '../art/textures';
 import { GAME_CONFIG } from '../config/game.config';
+import { FORWARD_VIEW, type ViewDirection } from '../systems/ViewDirection';
 import { DEPTH } from '../ui/theme';
 
 interface Pigeon {
@@ -21,7 +22,7 @@ export class PigeonFlock {
   private readonly pigeons: Pigeon[] = [];
   private nextSpawnAt = 900;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, private readonly view: ViewDirection = FORWARD_VIEW) {
     for (let i = 0; i < 8; i++) {
       const sprite = scene.add
         .sprite(0, 0, pigeonTex(0))
@@ -50,8 +51,9 @@ export class PigeonFlock {
         p.vy -= 160 * dt;
         if (p.sprite.y < -40 || p.sprite.x < -60 || p.sprite.x > width + 60) this.release(p);
       } else {
-        p.sprite.x = p.worldX - distance;
-        if (p.sprite.x < -40) this.release(p);
+        const x = p.worldX - distance;
+        p.sprite.x = this.view.x(x);
+        if (x < -40) this.release(p);
       }
     }
   }

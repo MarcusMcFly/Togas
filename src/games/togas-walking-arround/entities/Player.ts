@@ -5,6 +5,7 @@ import { ART_SCALE, TEX, charTex, idleAnim, runAnim } from '../art/textures';
 import { GAME_CONFIG } from '../config/game.config';
 import { REFERENCE_HEIGHT_M, type SkinDefinition } from '../../../core/characters/CharacterRegistry';
 import type { RunnerSystem } from '../systems/RunnerSystem';
+import { FORWARD_VIEW, type ViewDirection } from '../systems/ViewDirection';
 import { DEPTH } from '../ui/theme';
 
 /** Prioridad de las posturas especiales: una de mayor prioridad no se interrumpe por otra menor. */
@@ -23,33 +24,37 @@ export class Player {
   private readonly visualScale: number;
   private special: SinglePose | null = null;
   private specialUntil = 0;
-  /** Retroceso visual (no afecta a la física). */
+  /** Retroceso visual en el sentido de la marcha (no afecta a la física). */
   offsetX = 0;
 
+  /** @param x posición lógica (en el sentido de avance) */
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly skin: SkinDefinition,
     private readonly x: number,
+    private readonly view: ViewDirection = FORWARD_VIEW,
   ) {
     this.visualScale = skin.heightM / REFERENCE_HEIGHT_M / ART_SCALE;
-    this.shadow = scene.add.image(x, GAME_CONFIG.groundY, TEX.shadow).setDepth(DEPTH.shadows).setScale(0.5);
+    const screenX = view.x(x);
+    this.shadow = scene.add.image(screenX, GAME_CONFIG.groundY, TEX.shadow).setDepth(DEPTH.shadows).setScale(0.5);
     this.sprite = scene.add
-      .sprite(x, GAME_CONFIG.groundY, charTex(skin.id, 'idle0'))
+      .sprite(screenX, GAME_CONFIG.groundY, charTex(skin.id, 'idle0'))
       .setOrigin(CHARACTER_CANVAS.feetX / CHARACTER_CANVAS.width, CHARACTER_CANVAS.feetY / CHARACTER_CANVAS.height)
       .setScale(this.visualScale)
+      .setFlipX(view.reversed)
       .setDepth(DEPTH.player);
   }
 
   /** Punto de la boca (de donde salen los eructos). */
   get mouth(): { x: number; y: number } {
     const s = this.visualScale * ART_SCALE;
-    return { x: this.sprite.x + 18 * s, y: this.sprite.y - 96 * s };
+    return { x: this.sprite.x + this.view.facing * 18 * s, y: this.sprite.y - 96 * s };
   }
 
   /** Punto trasero (de donde salen los pedos). */
   get rear(): { x: number; y: number } {
     const s = this.visualScale * ART_SCALE;
-    return { x: this.sprite.x - 22 * s, y: this.sprite.y - 46 * s };
+    return { x: this.sprite.x - this.view.facing * 22 * s, y: this.sprite.y - 46 * s };
   }
 
   idle(): void {
@@ -71,7 +76,7 @@ export class Player {
 
   update(runner: RunnerSystem): void {
     const groundY = GAME_CONFIG.groundY;
-    this.sprite.x = this.x + this.offsetX;
+    this.sprite.x = this.view.x(this.x + this.offsetX);
     this.sprite.y = groundY - runner.height;
 
     // La sombra se encoge y aclara al subir.

@@ -16,7 +16,37 @@ export const CITY_LAYERS = {
   street: { width: TILE_WIDTH, height: 300, sidewalkY: 222 },
 } as const;
 
-export function drawSky(ctx: Ctx): void {
+/** Luces que se vuelven a encender tras oscurecer una capa de noche. */
+type AfterDark = Array<() => void>;
+
+/** Tono con el que se oscurece todo lo ya pintado de una capa nocturna (solo sus píxeles). */
+const NIGHT_SHADE = 'rgba(16,20,62,0.62)';
+const LIT_WINDOW = '#ffd36b';
+
+/** Oscurece lo pintado (sin tocar lo transparente) y vuelve a encender las luces. */
+function nightfall(ctx: Ctx, width: number, height: number, lights: AfterDark): void {
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-atop';
+  ctx.fillStyle = NIGHT_SHADE;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+  for (const light of lights) light();
+}
+
+/** Halo cálido alrededor de un punto de luz. */
+function glow(ctx: Ctx, x: number, y: number, radius: number, alpha: number): void {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  g.addColorStop(0, `rgba(255,214,120,${alpha})`);
+  g.addColorStop(1, 'rgba(255,214,120,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+export function drawSky(ctx: Ctx, night = false): void {
+  if (night) {
+    drawNightSky(ctx);
+    return;
+  }
   const { width, height } = CITY_LAYERS.sky;
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, '#5fb8f5');
@@ -35,12 +65,46 @@ export function drawSky(ctx: Ctx): void {
   ctx.fill();
 }
 
-export function drawClouds(ctx: Ctx): void {
+/** Cielo nocturno: degradado azul oscuro, estrellas y luna llena. */
+function drawNightSky(ctx: Ctx): void {
+  const { width, height } = CITY_LAYERS.sky;
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, '#070b24');
+  gradient.addColorStop(0.5, '#18205a');
+  gradient.addColorStop(0.8, '#3b3a7a');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  const rng = new Random(11);
+  for (let i = 0; i < 90; i++) {
+    const x = rng.range(0, width);
+    const y = rng.range(0, height * 0.55);
+    ctx.fillStyle = `rgba(255,255,240,${rng.range(0.35, 0.95).toFixed(2)})`;
+    circlePath(ctx, x, y, rng.chance(0.12) ? 1.8 : 1);
+    ctx.fill();
+  }
+
+  const halo = ctx.createRadialGradient(170, 100, 10, 170, 100, 120);
+  halo.addColorStop(0, 'rgba(220,230,255,0.55)');
+  halo.addColorStop(1, 'rgba(220,230,255,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(40, 0, 260, 240);
+  circlePath(ctx, 170, 100, 36);
+  ctx.fillStyle = '#f4f1dc';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(180,176,150,0.45)';
+  for (const [dx, dy, r] of [[-12, -8, 7], [10, 6, 9], [-4, 16, 5]] as const) {
+    circlePath(ctx, 170 + dx, 100 + dy, r);
+    ctx.fill();
+  }
+}
+
+export function drawClouds(ctx: Ctx, night = false): void {
   const clouds: ReadonlyArray<readonly [number, number, number]> = [
     [120, 60, 1], [430, 110, 0.7], [640, 45, 1.2], [900, 95, 0.8],
   ];
   for (const [x, y, s] of clouds) {
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillStyle = night ? 'rgba(110,118,176,0.5)' : 'rgba(255,255,255,0.92)';
     for (const [dx, dy, r] of [[-40, 8, 22], [-14, -6, 30], [18, -2, 26], [44, 10, 18], [0, 14, 24]] as const) {
       circlePath(ctx, x + dx * s, y + dy * s, r * s);
       ctx.fill();
@@ -48,13 +112,20 @@ export function drawClouds(ctx: Ctx): void {
   }
 }
 
-export function drawSkyline(ctx: Ctx): void {
+export function drawSkyline(ctx: Ctx, night = false): void {
   const { width, height } = CITY_LAYERS.skyline;
   const rng = new Random(7);
-  const rows = [
-    { color: '#c3d4ea', min: 50, max: 150 },
-    { color: '#9fb6d6', min: 30, max: 110 },
-  ];
+  const rows = night
+    ? [
+      { color: '#2b3266', min: 50, max: 150 },
+      { color: '#1f2552', min: 30, max: 110 },
+    ]
+    : [
+      { color: '#c3d4ea', min: 50, max: 150 },
+      { color: '#9fb6d6', min: 30, max: 110 },
+    ];
+  // De noche, ventanitas encendidas (con su propio azar: el perfil es el mismo que de día).
+  const lights = new Random(19);
   for (const row of rows) {
     ctx.fillStyle = row.color;
     let x = 0;
@@ -63,6 +134,13 @@ export function drawSkyline(ctx: Ctx): void {
       const h = rng.range(row.min, row.max);
       const top = height - h;
       ctx.fillRect(x, top, w, h);
+      if (night) {
+        ctx.fillStyle = 'rgba(255,211,107,0.75)';
+        for (let wy = top + 8; wy < height - 6; wy += 11) {
+          for (let wx = x + 5; wx < x + w - 6; wx += 9) if (lights.chance(0.16)) ctx.fillRect(wx, wy, 3, 4);
+        }
+        ctx.fillStyle = row.color;
+      }
       const roof = rng.next();
       if (roof < 0.15 && w > 50) {
         // Cúpula.
@@ -99,9 +177,10 @@ const SHOPS = [
   'CAFÉ', 'BAR PACO', 'SIDRERÍA', 'KEBAB', 'FABADAS 24H', 'COPISTERÍA', 'PANADERÍA', 'FARMACIA', 'CHURROS',
 ];
 
-export function drawBuildings(ctx: Ctx): void {
+export function drawBuildings(ctx: Ctx, night = false): void {
   const { width, height } = CITY_LAYERS.buildings;
   const rng = new Random(42);
+  const lights: AfterDark | null = night ? [] : null;
   let x = 0;
   let index = 0;
   while (x < width) {
@@ -109,13 +188,15 @@ export function drawBuildings(ctx: Ctx): void {
     let w = isFaculty ? 270 : rng.int(120, 185);
     if (width - x - w < 120) w = width - x;
     if (isFaculty) drawFaculty(ctx, x, w, height);
-    else drawBuilding(ctx, rng, x, w, height, SHOPS[index % SHOPS.length]);
+    else drawBuilding(ctx, rng, x, w, height, SHOPS[index % SHOPS.length], lights);
     x += w;
     index++;
   }
+  if (lights) nightfall(ctx, width, height, lights);
 }
 
-function drawBuilding(ctx: Ctx, rng: Random, x: number, w: number, bottom: number, shop: string): void {
+/** `lights`: de noche, aquí se apuntan las ventanas, escaparates y rótulos que siguen encendidos. */
+function drawBuilding(ctx: Ctx, rng: Random, x: number, w: number, bottom: number, shop: string, lights: AfterDark | null = null): void {
   const h = rng.range(185, 300);
   const top = bottom - h;
   const facade = rng.pick(FACADES);
@@ -167,7 +248,17 @@ function drawBuilding(ctx: Ctx, rng: Random, x: number, w: number, bottom: numbe
       ctx.fillRect(wx - 7, y, 6, 30);
       ctx.fillRect(wx + 21, y, 6, 30);
       roundRectPath(ctx, wx, y, 20, 30, 2);
-      fillStroke(ctx, rng.chance(0.25) ? '#ffe9a8' : '#bfe3f0', 1.5, outline);
+      const warm = rng.chance(0.25);
+      fillStroke(ctx, warm ? '#ffe9a8' : '#bfe3f0', 1.5, outline);
+      // De noche siguen encendidas las que de día ya tenían luz cálida.
+      if (warm && lights) {
+        const wy = y;
+        lights.push(() => {
+          glow(ctx, wx + 10, wy + 15, 26, 0.35);
+          roundRectPath(ctx, wx, wy, 20, 30, 2);
+          fillStroke(ctx, LIT_WINDOW, 1.5, outline);
+        });
+      }
       ctx.strokeStyle = 'rgba(255,255,255,0.7)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -216,9 +307,20 @@ function drawBuilding(ctx: Ctx, rng: Random, x: number, w: number, bottom: numbe
   ctx.strokeStyle = outline;
   ctx.lineWidth = 1.5;
   ctx.strokeRect(x + 8, gy + 6, Math.floor((w - 16) / 16) * 16, 12);
-  roundRectPath(ctx, x + w / 2 - 44, gy - 16, 88, 18, 4);
-  fillStroke(ctx, '#2b2340', 0);
-  label(ctx, shop, x + w / 2, gy - 7, shop.length > 9 ? 9.5 : 11, '#ffd23f');
+  const sign = () => {
+    roundRectPath(ctx, x + w / 2 - 44, gy - 16, 88, 18, 4);
+    fillStroke(ctx, '#2b2340', 0);
+    label(ctx, shop, x + w / 2, gy - 7, shop.length > 9 ? 9.5 : 11, '#ffd23f');
+  };
+  sign();
+  // De noche: escaparate iluminado y rótulo encendido.
+  lights?.push(() => {
+    glow(ctx, x + w / 2 - 22, gy + 40, 70, 0.3);
+    roundRectPath(ctx, x + 10, gy + 22, w - 54, groundFloor - 22, 3);
+    fillStroke(ctx, '#ffe7a6', 2, outline);
+    glow(ctx, x + w / 2, gy - 7, 54, 0.22);
+    sign();
+  });
 }
 
 function drawFaculty(ctx: Ctx, x: number, w: number, bottom: number): void {
@@ -265,7 +367,7 @@ function drawFaculty(ctx: Ctx, x: number, w: number, bottom: number): void {
   }
 }
 
-export function drawStreet(ctx: Ctx): void {
+export function drawStreet(ctx: Ctx, night = false): void {
   const { width, height, sidewalkY } = CITY_LAYERS.street;
   // Acera.
   ctx.fillStyle = '#d6cfc2';
@@ -301,6 +403,39 @@ export function drawStreet(ctx: Ctx): void {
   drawBike(ctx, 700, sidewalkY);
   drawTree(ctx, 850, sidewalkY);
   drawBin(ctx, 975, sidewalkY);
+
+  if (night) {
+    nightfall(ctx, width, height, [70, 600].map((lampX) => () => drawLampLight(ctx, lampX, sidewalkY)));
+  }
+}
+
+/** Farola encendida: haz de luz, charco en la acera, halo y bombilla. */
+function drawLampLight(ctx: Ctx, x: number, ground: number): void {
+  const bulbX = x + 25;
+  const bulbY = ground - 196;
+  const cone = ctx.createLinearGradient(0, bulbY, 0, ground + 30);
+  cone.addColorStop(0, 'rgba(255,214,120,0.32)');
+  cone.addColorStop(1, 'rgba(255,214,120,0.06)');
+  ctx.fillStyle = cone;
+  ctx.beginPath();
+  ctx.moveTo(bulbX - 8, bulbY + 6);
+  ctx.lineTo(bulbX + 8, bulbY + 6);
+  ctx.lineTo(bulbX + 70, ground + 30);
+  ctx.lineTo(bulbX - 70, ground + 30);
+  ctx.closePath();
+  ctx.fill();
+  ctx.save();
+  ctx.translate(bulbX, ground + 18);
+  ctx.scale(1, 0.22);
+  const pool = ctx.createRadialGradient(0, 0, 0, 0, 0, 90);
+  pool.addColorStop(0, 'rgba(255,224,150,0.55)');
+  pool.addColorStop(1, 'rgba(255,224,150,0)');
+  ctx.fillStyle = pool;
+  ctx.fillRect(-90, -90, 180, 180);
+  ctx.restore();
+  glow(ctx, bulbX, bulbY + 2, 46, 0.6);
+  roundRectPath(ctx, x + 16, ground - 202, 18, 12, 4);
+  fillStroke(ctx, '#fff6c8', 2);
 }
 
 function drawStreetLamp(ctx: Ctx, x: number, ground: number): void {

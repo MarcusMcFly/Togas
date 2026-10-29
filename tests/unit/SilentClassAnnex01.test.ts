@@ -200,14 +200,15 @@ describe('Anexo 01 · IMP-03 detección del pedo silencioso', () => {
       const silent: boolean[] = [];
       sim.bus.on('SILENT_EMISSION', (e) => silent.push(!e.detected));
       sim.bus.on('TRUMPET_EMISSION', () => silent.push(false));
-      // Juega con cuidado hasta el último fotograma antes del timbre, sin dejar que llegue a 100.
+      // Juega con cuidado hasta el último fotograma antes del timbre, sin dejar que llegue a 100
+      // y soltando flojo (tier 2): con la nube de tier 3 vaciaría el aula antes de tiempo.
       const lastFrame = GAME_CONFIG.session.durationSec - DT * 1.5;
       while (sim.elapsed < lastFrame && !sim.ended) {
         if (!sim.isHolding) sim.press();
         const { horizontal, vertical } = sim.balance.state;
         sim.setInput(clamp(-horizontal * 6), clamp(-vertical * 6));
         sim.update(DT);
-        if (sim.elapsed < lastFrame - 2.5 && sim.readiness.ready && sim.pressure.value > 60) sim.release();
+        if (sim.elapsed < lastFrame - 2.5 && sim.readiness.ready && sim.pressure.value > 40 && sim.pressure.value < 60) sim.release();
       }
       expect(sim.ended, `semilla ${seed}`).toBeNull();
       expect(sim.timeLeft).toBeLessThan(5);

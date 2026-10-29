@@ -300,6 +300,12 @@ export class ClassroomScene extends Phaser.Scene {
       this.hud.toast(`${tier.name}${e.perfect ? ' · ¡CENTRADO PERFECTO!' : ''}`, tier.color, 1300);
     });
 
+    on('CLOUD_OUT_OF_REACH', ({ neededPressure }) => {
+      const hint = neededPressure === null ? '' : `
+Aguanta hasta el ${neededPressure}% de presión`;
+      this.time.delayedCall(1400, () => this.hud.toast(`💨 La nube no llega a nadie más${hint}`, '#ffd23f', 2000));
+    });
+
     on('STUDENT_FELL_ASLEEP', ({ studentId }) => {
       this.lastStudentId = studentId;
     });

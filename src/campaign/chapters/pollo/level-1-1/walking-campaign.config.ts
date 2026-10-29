@@ -42,7 +42,12 @@ export const LENTIL_COMMUTE_RULESET: WalkingRuleset = {
   collectibles: [{ ...LENTILS, spawnWeight: 1.6 }, ...COLLECTIBLES],
   itemMultipliers: { lentils: 3 },
   emissions: 'fartOnly',
-  goal: { kind: 'distance', distance: 21000 },
+  goal: {
+    kind: 'distance', distance: 21000, destination: 'university', origin: null,
+    arrivalText: '¡LLEGASTE A LA\nUNIVERSIDAD!', requiresPoints: true,
+  },
+  direction: 'forward',
+  night: false,
   controls: 'tapAndSwipe',
   spawn: COMMUTE_SPAWN,
   traversal: ['work_fence', 'planter', 'scaffold', 'hanging_sign'],
@@ -50,7 +55,7 @@ export const LENTIL_COMMUTE_RULESET: WalkingRuleset = {
     emissionRadius: 170,
     multiplier: { start: 1, step: 0.25, max: 3 },
     speedBoost: { perEmission: 45, decayPerSec: 9, maxSpeed: 470 },
-    maxWanted: 5,
+    witnessPenalty: { kind: 'police', maxWanted: 5 },
   },
   pedestriansBothWays: true,
 };

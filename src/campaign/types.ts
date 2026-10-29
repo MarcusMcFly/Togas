@@ -59,6 +59,11 @@ export interface ChapterDefinition {
   number: number;
   title: string;
   characterId: string;
+  /**
+   * Puntos de campaña con los que hay que terminar el capítulo para desbloquear al
+   * siguiente personaje (la regla de desbloqueo usa este mismo número como `minScore`).
+   */
+  nextCharacterScore?: number;
   /** Mientras alguna misión esté `planned`, el capítulo se marca "En desarrollo". */
   missions: readonly MissionDefinition[];
 }

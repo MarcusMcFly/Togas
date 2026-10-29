@@ -31,6 +31,10 @@ export interface WalkingMissionStats {
   otherCollected: number;
   emissions: number;
   cleanEmissions: number;
+  /** Pedos con testigos. */
+  witnessedEmissions: number;
+  /** Puntos de campaña perdidos por testigos (si el reglamento los cobra en puntos). */
+  pointsLost: number;
   pedestriansAffected: number;
   bestMultiplier: number;
   wanted: number;

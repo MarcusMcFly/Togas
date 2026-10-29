@@ -3,8 +3,7 @@ import type { GestureBinding } from '../../../core/services/GestureInput';
 import type { PrimaryAction } from '../../../core/services/InputManager';
 import { clamp } from '../../../core/utils/math';
 import { Random } from '../../../core/utils/Random';
-import { UNIVERSITY_CANVAS } from '../art/landmarks';
-import { ART_SCALE, TEX } from '../art/textures';
+import { ART_SCALE, LANDMARKS } from '../art/textures';
 import { emissionSound } from '../audio/emissionSounds';
 import {
   antigasSound, bumpSound, cleanEmissionSound, countdownBeep, fanfareSound, goBeep, jumpSound, pickupSound, rollSound,
@@ -15,6 +14,7 @@ import {
 } from '../config/collectibles.config';
 import { SOUND_VARIANTS_PER_TIER, getTierPresentation } from '../config/emission.config';
 import { GAME_CONFIG } from '../config/game.config';
+import type { LandmarkId } from '../config/ruleset';
 import { traversalById, type TraversalObstacleDefinition } from '../config/traversal.config';
 import { Barrier } from '../entities/Barrier';
 import { CityBackdrop } from '../entities/CityBackdrop';
@@ -33,6 +33,7 @@ import { RunnerSystem, minObstacleGap } from '../systems/RunnerSystem';
 import { ScoreSystem } from '../systems/ScoreSystem';
 import { SpawnSystem, type SpawnRequest } from '../systems/SpawnSystem';
 import { StreetSystem } from '../systems/StreetSystem';
+import { ViewDirection } from '../systems/ViewDirection';
 import { DEPTH, addText } from '../ui/theme';
 
 /** Lo que el HUD necesita leer en cada frame. */
@@ -44,7 +45,28 @@ export interface HudState {
   tier: number;
   skinId: string;
   /** Solo con meta por distancia y reglas de calle (campaña). */
-  street: { progress: number; multiplier: number; wanted: number; maxWanted: number } | null;
+  street: StreetHud | null;
+}
+
+export interface StreetHud {
+  progress: number;
+  multiplier: number;
+  /** `police`: estrellas de búsqueda. `points`: los testigos cuestan puntos. */
+  penalty: 'police' | 'points';
+  wanted: number;
+  maxWanted: number;
+  /** Pedos con testigos (penalización por puntos). */
+  witnessed: number;
+  destination: LandmarkId;
+  /** Se avanza hacia la izquierda: la barra de progreso se llena en ese sentido. */
+  reversed: boolean;
+}
+
+/** Edificio de salida o llegada colocado en el mundo. */
+interface Landmark {
+  image: Phaser.GameObjects.Image;
+  /** X lógica de su puerta. */
+  worldX: number;
 }
 
 type State = 'countdown' | 'playing' | 'ending' | 'arrest';
@@ -53,6 +75,12 @@ const JUMP_KEYS = ['Space', 'ArrowUp', 'KeyW'] as const;
 const ROLL_KEYS = ['ArrowDown', 'KeyS'] as const;
 /** La generación se detiene antes de la meta para que la llegada quede despejada. */
 const GOAL_CLEARANCE = 520;
+/** Distancia de la puerta del edificio de salida por detrás del jugador. */
+const ORIGIN_BEHIND = 220;
+/** Frenada al llegar a la meta (px/s²). */
+const BRAKE_DECEL = 320;
+/** Tinte de penumbra para el arte de día en un nivel de noche. */
+const NIGHT_TINT = 0x8f93c8;
 
 /**
  * La partida. Orquesta los sistemas (lógica pura) y las entidades (lo que se ve):
@@ -74,7 +102,8 @@ export class PlayScene extends Phaser.Scene {
   private pigeons!: PigeonFlock;
   private pedestrians!: PedestrianCrowd;
   private fx!: EffectsDirector;
-  private university: Phaser.GameObjects.Image | null = null;
+  private landmarks: Landmark[] = [];
+  private view = new ViewDirection();
   private collectibles: Collectible[] = [];
   private obstacles: Obstacle[] = [];
   private barriers: Barrier[] = [];
@@ -93,6 +122,8 @@ export class PlayScene extends Phaser.Scene {
   private braking = false;
   private escorting = false;
   private stumbles = 0;
+  /** Puntos de campaña perdidos por pedos con testigos. */
+  private pointsLost = 0;
   private finished = false;
   private readonly spawnQueue: SpawnRequest[] = [];
   private readonly playerBox: Rect = { x: 0, y: 0, w: 0, h: 0 };
@@ -139,28 +170,26 @@ export class PlayScene extends Phaser.Scene {
     this.braking = false;
     this.escorting = false;
     this.stumbles = 0;
+    this.pointsLost = 0;
     this.finished = false;
     this.collectibles = [];
     this.obstacles = [];
     this.barriers = [];
     this.spawnQueue.length = 0;
 
-    this.backdrop = new CityBackdrop(this);
+    this.view = new ViewDirection(rules.direction === 'reverse');
+    this.backdrop = new CityBackdrop(this, { night: rules.night, reversed: this.view.reversed });
+    this.landmarks = [];
     if (rules.goal.kind === 'distance') {
-      this.university = this.add
-        .image(0, GAME_CONFIG.groundY, TEX.university)
-        .setOrigin(0.5, UNIVERSITY_CANVAS.groundY / UNIVERSITY_CANVAS.height)
-        .setScale(1 / ART_SCALE)
-        .setDepth(DEPTH.street + 0.5)
-        .setVisible(false);
-    } else {
-      this.university = null;
+      const { goal } = rules;
+      if (goal.origin) this.addLandmark(goal.origin, this.playerX - ORIGIN_BEHIND);
+      this.addLandmark(goal.destination, goal.distance + this.playerX);
     }
-    this.pigeons = new PigeonFlock(this);
-    this.pedestrians = new PedestrianCrowd(this, { bothWays: rules.pedestriansBothWays });
-    this.player = new Player(this, this.rt.skin, view.width * playerAnchorX);
+    this.pigeons = new PigeonFlock(this, this.view);
+    this.pedestrians = new PedestrianCrowd(this, { bothWays: rules.pedestriansBothWays, view: this.view });
+    this.player = new Player(this, this.rt.skin, view.width * playerAnchorX, this.view);
     this.player.idle();
-    this.fx = new EffectsDirector(this);
+    this.fx = new EffectsDirector(this, this.view.facing);
 
     Object.assign(this.hud, {
       score: this.rt.mission?.host.score ?? 0,
@@ -168,7 +197,18 @@ export class PlayScene extends Phaser.Scene {
       gas: 0,
       tier: 0,
       skinId: this.rt.skin.id,
-      street: this.street ? { progress: 0, multiplier: this.street.multiplier, wanted: 0, maxWanted: this.street.maxWanted } : null,
+      street: this.street && rules.street && rules.goal.kind === 'distance'
+        ? {
+          progress: 0,
+          multiplier: this.street.multiplier,
+          penalty: rules.street.witnessPenalty.kind,
+          wanted: 0,
+          maxWanted: this.street.maxWanted,
+          witnessed: 0,
+          destination: rules.goal.destination,
+          reversed: this.view.reversed,
+        }
+        : null,
     });
     this.scene.launch('hud', { state: this.hud });
 
@@ -190,6 +230,7 @@ export class PlayScene extends Phaser.Scene {
 
     if (this.state === 'countdown') {
       this.backdrop.setScroll(0, this.clock);
+      this.placeLandmarks(0);
       return;
     }
 
@@ -207,7 +248,7 @@ export class PlayScene extends Phaser.Scene {
       this.street.update(dt);
       this.runner.speedBonus = this.street.boost;
     }
-    if (this.braking || this.state === 'arrest') this.runner.speedCap = Math.max(0, this.runner.speed - 320 * dt);
+    if (this.braking || this.state === 'arrest') this.runner.speedCap = Math.max(0, this.runner.speed - BRAKE_DECEL * dt);
 
     this.runner.update(dt, progress);
     if (this.runner.justJumped) this.rt.play(jumpSound);
@@ -225,7 +266,9 @@ export class PlayScene extends Phaser.Scene {
     this.updateWorldObjects(distance);
     if (!this.escorting) this.player.update(this.runner);
 
-    if (goal.kind === 'distance' && this.state === 'playing' && distance >= goal.distance) this.arrive();
+    // Se empieza a frenar a tiempo para pararse justo en la puerta.
+    const brakingDistance = (this.runner.speed * this.runner.speed) / (2 * BRAKE_DECEL);
+    if (goal.kind === 'distance' && this.state === 'playing' && distance + brakingDistance >= goal.distance) this.arrive();
 
     this.hud.score = this.rt.mission?.host.score ?? this.score.score;
     this.hud.timeLeft = goal.kind === 'time' ? goal.durationSec - this.elapsed : 0;
@@ -235,7 +278,21 @@ export class PlayScene extends Phaser.Scene {
       this.hud.street.progress = progress;
       this.hud.street.multiplier = this.street.multiplier;
       this.hud.street.wanted = this.street.wanted;
+      this.hud.street.witnessed = this.street.witnessedEmissions;
     }
+  }
+
+  private addLandmark(id: LandmarkId, worldX: number): void {
+    const { key, canvas } = LANDMARKS[id];
+    const image = this.add
+      .image(0, GAME_CONFIG.groundY, key)
+      .setOrigin(0.5, canvas.groundY / canvas.height)
+      .setScale(1 / ART_SCALE)
+      .setDepth(DEPTH.street + 0.5)
+      .setVisible(false);
+    // De noche, los edificios dibujados de día se ven en penumbra (la casa ya se dibuja de noche).
+    if (this.rt.ruleset.night && !canvas.night) image.setTint(NIGHT_TINT);
+    this.landmarks.push({ image, worldX });
   }
 
   private bindInput(): void {
@@ -318,7 +375,7 @@ export class PlayScene extends Phaser.Scene {
     for (const item of this.collectibles) {
       if (!item.active) continue;
       const screenX = item.worldX - distance;
-      item.place(screenX, this.clock);
+      item.place(this.view.x(screenX), this.clock);
       if (screenX < -80) {
         item.deactivate();
         continue;
@@ -332,7 +389,7 @@ export class PlayScene extends Phaser.Scene {
     for (const obstacle of this.obstacles) {
       if (!obstacle.active) continue;
       const screenX = obstacle.worldX - distance;
-      obstacle.place(screenX, this.clock);
+      obstacle.place(this.view.x(screenX), this.clock);
       if (screenX < -80) {
         obstacle.deactivate();
         continue;
@@ -345,7 +402,7 @@ export class PlayScene extends Phaser.Scene {
     for (const barrier of this.barriers) {
       if (!barrier.active) continue;
       const screenX = barrier.worldX - distance;
-      barrier.place(screenX, this.clock);
+      barrier.place(this.view.x(screenX), this.clock);
       if (screenX < -160) {
         barrier.deactivate();
         continue;
@@ -356,11 +413,14 @@ export class PlayScene extends Phaser.Scene {
       if (overlaps(this.playerBox, this.itemBox)) this.hitBarrier(barrier);
     }
 
-    const goal = this.rt.ruleset.goal;
-    if (this.university && goal.kind === 'distance') {
-      // La puerta queda justo a la altura del jugador cuando se alcanza la meta.
-      const x = goal.distance + this.playerX - distance;
-      this.university.setX(x).setVisible(x > -300 && x < GAME_CONFIG.view.width + 300);
+    this.placeLandmarks(distance);
+  }
+
+  /** La puerta de la meta queda justo a la altura del jugador cuando se alcanza. */
+  private placeLandmarks(distance: number): void {
+    for (const landmark of this.landmarks) {
+      const x = landmark.worldX - distance;
+      landmark.image.setX(this.view.x(x)).setVisible(x > -300 && x < GAME_CONFIG.view.width + 300);
     }
   }
 
@@ -457,12 +517,29 @@ export class PlayScene extends Phaser.Scene {
       });
       return;
     }
+    if (verdict.pointsPenalty > 0) {
+      this.loseWitnessPoints(verdict.pointsPenalty, x);
+      return;
+    }
     this.rt.mission?.host.report({ type: 'POLICE_STAR_ADDED', wantedLevel: verdict.wanted });
     this.rt.play(whistleSound);
     this.time.delayedCall(200, () => this.rt.play(sirenSound));
     this.fx.siren(this.rt.reducedMotion);
     this.fx.banner('¡ALTERACIÓN DEL\nORDEN PÚBLICO!', 44, '#ff4d6d', 700);
     if (verdict.arrested) this.startArrest();
+  }
+
+  /** Pedo con testigos sin policía: cuesta puntos, pero la misión sigue. */
+  private loseWitnessPoints(points: number, x: number): void {
+    const change = this.rt.mission?.host.report({ type: 'CAMPAIGN_POINTS_LOST', amount: points });
+    const lost = change ? -change.applied : 0;
+    this.pointsLost += lost;
+    this.rt.play(whistleSound);
+    this.player.flash(0xff9aa8, 220);
+    this.fx.banner('¡TE HAN OLIDO!', 44, '#ff4d6d', 600);
+    this.time.delayedCall(250, () => {
+      this.fx.floatingScore(lost > 0 ? `−${lost.toLocaleString('es-ES')} · ×1` : '¡Pillado! ×1', x, GAME_CONFIG.groundY - 150, '#ff8fa3');
+    });
   }
 
   private recoil(px: number): void {
@@ -494,8 +571,11 @@ export class PlayScene extends Phaser.Scene {
     this.runner.releaseJump();
     this.rt.play(fanfareSound);
     this.player.showPose('strong', 1600);
-    const scored = (this.rt.mission?.host.score ?? this.score.score) > 0;
-    this.fx.banner(scored ? '¡LLEGASTE A LA\nUNIVERSIDAD!' : 'LLEGAS…\n¡PERO SIN PUNTOS!', 50, scored ? '#8bd450' : '#ff8fa3', 1300);
+    const goal = this.rt.ruleset.goal;
+    const requiresPoints = goal.kind === 'distance' && goal.requiresPoints;
+    const arrivalText = goal.kind === 'distance' ? goal.arrivalText : '¡META!';
+    const scored = !requiresPoints || (this.rt.mission?.host.score ?? this.score.score) > 0;
+    this.fx.banner(scored ? arrivalText : 'LLEGAS…\n¡PERO SIN PUNTOS!', 50, scored ? '#8bd450' : '#ff8fa3', 1300);
     this.time.delayedCall(2400, () => this.finishMission(scored ? 'completed' : 'failed', scored ? undefined : 'noPoints'));
   }
 
@@ -535,6 +615,8 @@ export class PlayScene extends Phaser.Scene {
       otherCollected: s.totalCollected - special,
       emissions: s.burps + s.farts,
       cleanEmissions: this.street?.cleanEmissions ?? 0,
+      witnessedEmissions: this.street?.witnessedEmissions ?? 0,
+      pointsLost: this.pointsLost,
       pedestriansAffected: this.street?.pedestriansAffected ?? 0,
       bestMultiplier: this.street?.bestMultiplier ?? 1,
       wanted: this.street?.wanted ?? 0,

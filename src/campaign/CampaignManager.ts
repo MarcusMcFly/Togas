@@ -74,6 +74,8 @@ export class CampaignManager {
     const initial = options.unlocks.initial();
     this.data = parseCampaignSave(storage.get<unknown>(SAVE_KEY, null)) ?? emptyCampaignSave(initial);
     for (const id of initial) if (!this.data.unlockedCharacterIds.includes(id)) this.data.unlockedCharacterIds.push(id);
+    // Un personaje añadido después se desbloquea con lo ya conseguido (p. ej. la puntuación de un capítulo terminado antes).
+    this.data.unlockedCharacterIds.push(...options.unlocks.newlyUnlocked(this.data.bestChapterScores, this.data.unlockedCharacterIds));
     this.discardInvalidAttempt();
     // Una misión que seguía "en juego" al cargar no llegó a terminar.
     if (this.data.attempt?.status === 'playing') this.interrupt(this.data.attempt);

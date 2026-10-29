@@ -6,7 +6,7 @@ import { CAMPAIGN_CONFIG, FAILURE_REASONS } from './config/campaign.config';
 import { CAMPAIGN_CHARACTERS, ROSTER } from './config/characters.config';
 import { CHAPTERS, UNLOCK_RULES } from './config/progression.config';
 import { CampaignUnlockSystem } from './systems/CampaignUnlockSystem';
-import { isChapterInDevelopment, nextMission } from './systems/MissionProgressSystem';
+import { isChapterInDevelopment, nextCharacterStatus, nextMission } from './systems/MissionProgressSystem';
 import { createIntro, type Screen } from './ui/CampaignIntro';
 import { createResults } from './ui/CampaignResults';
 import { createBriefing, createChapterMap, type MapAction } from './ui/ChapterMap';
@@ -140,6 +140,7 @@ export class CampaignSession implements GameSession {
       chapter,
       inDevelopment: isChapterInDevelopment(chapter),
       nodes: this.manager.nodes(),
+      nextCharacter: nextCharacterStatus(chapter, this.manager.state.bestChapterScores[chapter.id] ?? 0),
       summary: this.manager.summary(),
       action,
       onStart: () => this.showBriefing(),
@@ -186,6 +187,12 @@ export class CampaignSession implements GameSession {
       attemptLost: result.attempt.status === 'lost',
       next,
       upcoming,
+      chapterUnlock: result.chapterCompleted
+        ? {
+          status: nextCharacterStatus(chapter, result.record.scoreAfter),
+          unlockedNames: result.newlyUnlocked.map((id) => this.manager.character(id)?.name ?? id),
+        }
+        : null,
       onNext: () => this.showBriefing(),
       onRetry: () => {
         if (this.manager.retryMission()) this.showBriefing();
