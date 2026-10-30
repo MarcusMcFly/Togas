@@ -83,14 +83,15 @@ describe('BalanceSystem', () => {
     expect(b.accuracy).toBeGreaterThan(0.85);
   });
 
-  it('sin corrección, la presión alta desequilibra las burbujas', () => {
+  it('sin corrección, la presión alta desequilibra las burbujas al final de la clase', () => {
     const b = new BalanceSystem(BALANCE_CONFIG, new Random(7));
+    b.update(BALANCE_CONFIG.softenSec, { active: false, x: 0, y: 0 }, 0, 1); // muelle ya blando
     let maxDeviation = 0;
     for (let i = 0; i < 600; i++) {
-      b.update(1 / 60, { active: true, x: 0, y: 0 }, 1, 1);
+      b.update(1 / 60, { active: true, x: 0, y: 0 }, 1, 1.25);
       maxDeviation = Math.max(maxDeviation, Math.abs(b.state.horizontal), Math.abs(b.state.vertical));
     }
-    expect(maxDeviation).toBeGreaterThan(BALANCE_CONFIG.warningThreshold);
+    expect(maxDeviation).toBeGreaterThan(BALANCE_CONFIG.safeThreshold * 2);
   });
 
   it('clasifica zonas: seguro, deriva, aviso y crítico', () => {

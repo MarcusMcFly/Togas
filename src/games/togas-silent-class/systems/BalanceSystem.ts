@@ -31,11 +31,16 @@ interface Wave {
 }
 
 /**
- * Las dos burbujas (piernas y glúteos). Cada eje se integra con paso fijo:
+ * Las dos burbujas (piernas y glúteos). Cada eje es una partícula atada a un muelle,
+ * integrada con paso fijo:
  *
- *   velocidad = deriva + mando amortiguado · ganancia
- *   deriva    → perturbación(t) · curva(presión) + inestabilidad · posición,
- *               con tope de velocidad y de aceleración
+ *   aceleración = -k · (posición - ancla) - c · velocidad + perturbación(t) · deriva
+ *
+ * - El ancla la pone el dedo (control de posición): dejar el pulgar quieto deja la burbuja
+ *   quieta, así se juega con una mano sin corregir a cada instante.
+ * - La rigidez k empieza alta y se ablanda con el tiempo de clase; la presión la ablanda
+ *   aún más. Con el muelle blando la perturbación desplaza más y la burbuja bambolea.
+ * - La amortiguación c sigue a k (factor de amortiguación fijo) y la velocidad tiene tope.
  *
  * La perturbación es una suma de senos lentos con fases aleatorias: suave, visible y
  * función solo del tiempo, así que el resultado no depende de los FPS (GAME-013).
@@ -47,9 +52,9 @@ export class BalanceSystem {
   private readonly waves: [Wave[], Wave[]];
   private time = 0;
   private accumulator = 0;
-  /** Mando tras la amortiguación y velocidad de deriva actual, por eje. */
+  /** Ancla del muelle (mando tras la amortiguación) y velocidad de la partícula, por eje. */
   private readonly control: [number, number] = [0, 0];
-  private readonly driftVelocity: [number, number] = [0, 0];
+  private readonly velocity: [number, number] = [0, 0];
   private stableSec = 0;
   private centeredBefore = false;
   /** Suma ponderada por tiempo de la desviación, para la precisión media. */
@@ -113,25 +118,40 @@ export class BalanceSystem {
     this.time += h;
     const curve = balanceCurve(p.curve, pressureRatio);
     const warmup = this.warmup;
-    const drift = curve.drift * driftScale * warmup;
-    const instability = curve.instability * warmup;
+    const force = curve.drift * p.driftForce * driftScale * warmup;
+    const k = this.stiffness(pressureRatio);
+    const c = 2 * p.dampingRatio * Math.sqrt(k);
     const response = 1 - Math.exp(-h / Math.max(1e-6, p.inputResponseSec));
-    const maxDelta = p.maxDriftAccel * h;
     const values: [number, number] = [this.state.horizontal, this.state.vertical];
     const targets: [number, number] = [input.active ? input.x : 0, input.active ? input.y : 0];
     for (let axis = 0; axis < 2; axis++) {
       const x = values[axis];
       this.control[axis] += (targets[axis] - this.control[axis]) * response;
-      const push = input.active ? instability * x : 0;
-      const wanted = clamp(this.disturbance(axis) * drift + push, -p.maxDriftSpeed, p.maxDriftSpeed);
-      this.driftVelocity[axis] += clamp(wanted - this.driftVelocity[axis], -maxDelta, maxDelta);
-      let velocity = this.driftVelocity[axis];
-      if (input.active) velocity += this.control[axis] * p.correctionGain;
-      else velocity -= p.idleRelax * x;
-      values[axis] = clamp(x + velocity * h, -1, 1);
+      const accel = -k * (x - this.control[axis]) - c * this.velocity[axis] + this.disturbance(axis) * force;
+      // Euler semi-implícito: estable con el paso fijo.
+      const v = clamp(this.velocity[axis] + accel * h, -p.maxSpeed, p.maxSpeed);
+      const next = clamp(x + v * h, -1, 1);
+      // Contra el tope del tubo la burbuja se para.
+      this.velocity[axis] = Math.abs(next) >= 1 && Math.sign(v) === Math.sign(next) ? 0 : v;
+      values[axis] = next;
     }
     this.state.horizontal = values[0];
     this.state.vertical = values[1];
+  }
+
+  /** 0–1: cuánto se ha ablandado ya el muelle por el paso del tiempo. */
+  get softening(): number {
+    const s = this.params.softenSec;
+    if (s <= 0) return 1;
+    const t = clamp(this.time / s, 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  /** Rigidez actual del muelle (1/s²): baja con el tiempo y con la presión. */
+  stiffness(pressureRatio: number): number {
+    const p = this.params;
+    const base = p.stiffnessStart + (p.stiffnessEnd - p.stiffnessStart) * this.softening;
+    return base * (1 - balanceCurve(p.curve, pressureRatio).instability);
   }
 
   /** 0–1: cuánto de la deriva ha entrado ya (calentamiento del principio de la clase). */
@@ -223,7 +243,7 @@ export class BalanceSystem {
     this.stableSec = 0;
     this.centeredBefore = false;
     this.control.fill(0);
-    this.driftVelocity.fill(0);
+    this.velocity.fill(0);
   }
 
   /** Suelta el control sin reiniciar posiciones (p. ej. al cancelar un toque). */
