@@ -17,17 +17,20 @@ const DT = 1 / 60;
 const clamp = (v: number) => Math.max(-1, Math.min(1, v));
 
 /**
- * Jugador "humano": ve la burbuja con 150 ms de retraso y corrige de forma
- * proporcional (sin la precisión perfecta del bot de los otros tests).
+ * Jugador "humano": ve la burbuja con 150 ms de retraso. El dedo es el ancla del muelle:
+ * lo aparta en contra de lo que ve y además lo va deslizando hasta centrarla.
  */
-function humanHand(delaySec = 0.15, gain = 3) {
+function humanHand(delaySec = 0.15, gain = 1) {
   const seen: Array<{ h: number; v: number }> = [];
   const lag = Math.round(delaySec / DT);
+  const thumb = { x: 0, y: 0 };
   return (state: { horizontal: number; vertical: number }) => {
     seen.push({ h: state.horizontal, v: state.vertical });
     const old = seen.length > lag ? seen[seen.length - 1 - lag] : { h: 0, v: 0 };
     if (seen.length > lag * 4) seen.shift();
-    return { x: clamp(-old.h * gain), y: clamp(-old.v * gain) };
+    thumb.x = clamp(thumb.x - old.h * gain * DT);
+    thumb.y = clamp(thumb.y - old.v * gain * DT);
+    return { x: clamp(thumb.x - old.h * gain), y: clamp(thumb.y - old.v * gain) };
   };
 }
 
@@ -122,17 +125,34 @@ describe('Anexo 01 · IMP-02 inestabilidad', () => {
     }
   });
 
-  it('la corrección máxima siempre supera a la deriva máxima', () => {
-    expect(BALANCE_CONFIG.correctionGain).toBeGreaterThan(BALANCE_CONFIG.maxDriftSpeed * 2);
+  it('el ancla del mando siempre puede compensar la deriva máxima con el muelle más blando', () => {
+    const c = BALANCE_CONFIG;
+    const worst = balanceCurve(c.curve, 1);
+    const softest = c.stiffnessEnd * (1 - worst.instability);
+    expect((worst.drift * c.driftForce) / softest).toBeLessThan(1);
   });
 
-  it('sin tocar el mando, la velocidad de deriva nunca pasa del tope', () => {
+  it('el muelle se ablanda con el tiempo de clase y con la presión', () => {
+    const b = new BalanceSystem(BALANCE_CONFIG, new Random(5));
+    const start = b.stiffness(0);
+    expect(b.stiffness(1)).toBeLessThan(start);
+    let prev = start;
+    for (let i = 0; i < 10; i++) {
+      b.update(10, { active: false, x: 0, y: 0 }, 0, 1);
+      expect(b.stiffness(0)).toBeLessThanOrEqual(prev);
+      prev = b.stiffness(0);
+    }
+    expect(b.softening).toBe(1);
+    expect(prev).toBeCloseTo(BALANCE_CONFIG.stiffnessEnd * (1 - BALANCE_CONFIG.curve[0].instability));
+  });
+
+  it('sin tocar el mando, la velocidad de la burbuja nunca pasa del tope', () => {
     const b = new BalanceSystem(BALANCE_CONFIG, new Random(11));
-    for (let i = 0; i < 600; i++) {
+    for (let i = 0; i < 90 / DT; i++) {
       const before = { ...b.state };
       b.update(DT, { active: true, x: 0, y: 0 }, 1, 1.25);
       const speed = Math.max(Math.abs(b.state.horizontal - before.horizontal), Math.abs(b.state.vertical - before.vertical)) / DT;
-      if (Math.abs(b.state.horizontal) < 1 && Math.abs(b.state.vertical) < 1) expect(speed).toBeLessThanOrEqual(BALANCE_CONFIG.maxDriftSpeed + 1e-9);
+      expect(speed).toBeLessThanOrEqual(BALANCE_CONFIG.maxSpeed + 1e-9);
     }
   });
 
@@ -270,8 +290,8 @@ describe('Anexo 01 · IMP-03 detección del pedo silencioso', () => {
   it('rozar un instante el borde no reinicia la confirmación', () => {
     const b = new BalanceSystem({ ...BALANCE_CONFIG, curve: [{ pressure: 0, drift: 0, instability: 0 }], inputResponseSec: 1e-4 }, new Random(1));
     b.update(0.2, { active: true, x: 0, y: 0 }, 0, 1);
-    // Empuja justo hasta pasar 0,18 sin salir del margen (0,22).
-    while (Math.abs(b.state.horizontal) < BALANCE_CONFIG.safeThreshold + 0.01) b.update(1 / 120, { active: true, x: 1, y: 0 }, 0, 1);
+    // Lleva el ancla justo fuera de 0,18 sin salir del margen (0,22).
+    while (Math.abs(b.state.horizontal) < BALANCE_CONFIG.safeThreshold + 0.01) b.update(1 / 120, { active: true, x: 0.21, y: 0 }, 0, 1);
     expect(b.isCentered).toBe(false);
     expect(b.isCounting).toBe(true);
     b.update(0.2, { active: true, x: 0, y: 0 }, 0, 1);
