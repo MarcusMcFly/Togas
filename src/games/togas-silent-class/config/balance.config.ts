@@ -4,7 +4,7 @@ export interface BalanceCurvePoint {
   pressure: number;
   /** Deriva del entorno (unidades/s) antes de dificultad y perks. */
   drift: number;
-  /** Inestabilidad: cuanto más lejos del centro, más empuja hacia fuera (1/s). */
+  /** Inestabilidad: fracción (0–1) en que la presión ablanda el muelle. */
   instability: number;
 }
 
@@ -20,18 +20,24 @@ export interface BalanceParams {
   holdMargin: number;
   joystickDeadZone: number;
   perfectThreshold: number;
-  correctionGain: number;
   /** Tiempo de respuesta (s) del mando: amortigua tirones y oscilaciones. */
   inputResponseSec: number;
   /** Curva continua presión → deriva/inestabilidad (se interpola suavemente entre puntos). */
   curve: readonly BalanceCurvePoint[];
-  /** Tope de la velocidad (unidades/s) que el entorno puede imprimir a una burbuja. */
-  maxDriftSpeed: number;
-  /** Tope de la aceleración (unidades/s²) de esa deriva: nunca hay tirones. */
-  maxDriftAccel: number;
+  /** Rigidez del muelle (1/s²) al empezar la clase: firme, la burbuja apenas se mueve. */
+  stiffnessStart: number;
+  /** Rigidez al final del ablandamiento: blando, la burbuja bambolea. */
+  stiffnessEnd: number;
+  /** Segundos de clase en los que el muelle pasa de firme a blando. */
+  softenSec: number;
+  /** Factor de amortiguación (1 = crítico). Por debajo de 1 la burbuja oscila un poco. */
+  dampingRatio: number;
+  /** Fuerza (unidades/s²) de la perturbación por unidad de deriva de la curva. */
+  driftForce: number;
+  /** Tope de la velocidad (unidades/s) de una burbuja: nunca hay tirones. */
+  maxSpeed: number;
   /** Segundos de calentamiento al empezar la clase: la deriva entra poco a poco. */
   warmupSec: number;
-  idleRelax: number;
   stepSec: number;
   disturbanceHz: readonly number[];
 }
@@ -51,12 +57,11 @@ export const BALANCE_CONFIG: Readonly<BalanceParams> = {
 
   /** Por debajo de esto en ambos ejes, la liberación cuenta como "perfectamente centrada". */
   perfectThreshold: 0.07,
-  /** Velocidad (unidades/s) que da el mando al máximo. */
-  correctionGain: 1.5,
+  /** Lo que tarda el ancla en seguir al dedo (s): filtra temblores del pulgar. */
   inputResponseSec: 0.06,
   /**
    * Tabla del anexo 01 (IMP-02): fácil → moderado → exigente → difícil → crítico,
-   * sin saltos en las fronteras. La corrección máxima (1,5 u/s) siempre dobla la deriva.
+   * sin saltos en las fronteras. `instability` ablanda el muelle hasta un 40 % extra.
    */
   curve: [
     { pressure: 0, drift: 0.1, instability: 0.08 },
@@ -66,15 +71,21 @@ export const BALANCE_CONFIG: Readonly<BalanceParams> = {
     { pressure: 0.9, drift: 0.47, instability: 0.36 },
     { pressure: 1, drift: 0.54, instability: 0.4 },
   ],
-  maxDriftSpeed: 0.7,
-  maxDriftAccel: 2.4,
+  /**
+   * Muelle: firme al principio y blando al final de la clase (90 s). Desplazamiento sin
+   * corregir ≈ deriva · driftForce · dificultad / rigidez.
+   */
+  stiffnessStart: 14,
+  stiffnessEnd: 5,
+  softenSec: 90,
+  dampingRatio: 0.8,
+  driftForce: 3,
+  maxSpeed: 3,
   warmupSec: 4,
-  /** Sin apretar, la burbuja vaga y tiende suavemente al centro (1/s). */
-  idleRelax: 0.7,
   /** Paso fijo de simulación: mismo resultado a 30, 60 o 144 FPS. */
   stepSec: 1 / 120,
-  /** Frecuencias (Hz) de las perturbaciones: lentas y visibles, nunca bruscas. */
-  disturbanceHz: [0.17, 0.31, 0.53],
+  /** Frecuencias (Hz) de las perturbaciones: lentas para que el pulgar pueda seguirlas. */
+  disturbanceHz: [0.11, 0.19, 0.31],
 };
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
